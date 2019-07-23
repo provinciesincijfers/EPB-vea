@@ -10,7 +10,7 @@
 [10](http://app.energiesparen.be/sites/all/includes_energiesparen/Open_Data/Data/10_AG_INSTALL_VENTILATIE.csv)
 [11](http://app.energiesparen.be/sites/all/includes_energiesparen/Open_Data/Data/11_AG_DIMENSIES.csv)
 
-2. Run de scripts in volgorde. Je hoeft niets manueel op te slaan.
+2. Run de scripts in volgorde. Alle nodige saves worden door het script gedaan. Je zal de verwijzingen naar de bestanden nog moeten aanpassen.
 
 OPGELET: soms wijzigt het datamodel van de leverancier. Dit is niet altijd direct duidelijk op basis van de foutmeldingen.
 Het datumformaat is wellicht gewijzigd.
