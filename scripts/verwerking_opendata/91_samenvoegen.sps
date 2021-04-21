@@ -1,9 +1,11 @@
 * Encoding: windows-1252.
 
 GET
-  FILE='C:\temp\epb\11_basis.sav'.
+  FILE=datamap +  'verwerkt\11_basis.sav'.
 DATASET NAME basis WINDOW=FRONT.
 sort cases aangifte_id (a).
+
+dataset close plat11.
 
 GET
   FILE=datamap +  'verwerkt\05_overzicht_resultaten.sav'.

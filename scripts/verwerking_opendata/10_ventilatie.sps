@@ -1,12 +1,11 @@
 * Encoding: windows-1252.
-
+* nieuw 2021: type koeling.
 
 PRESERVE.
 SET DECIMAL DOT.
 
 GET DATA  /TYPE=TXT
   /FILE=datamap +  'ruw\10_AG_INSTALL_VENTILATIE.csv'
-  /ENCODING='Locale'
   /DELCASE=LINE
   /DELIMITERS=","
   /QUALIFIER='"'
@@ -14,6 +13,7 @@ GET DATA  /TYPE=TXT
   /FIRSTCASE=2
   /DATATYPEMIN PERCENTAGE=95.0
   /VARIABLES=
+TIMESTAMP_EXTRACT auto
   AANGIFTE_ID A20
   VENTILATIEZONE_ID A20
   ENERGIESECTOR_ID A20
@@ -21,12 +21,15 @@ GET DATA  /TYPE=TXT
   M_FACTOR A10
   REDUCTIE_FACTOR_VRAAGSTURING A10
   AANWEZIGHEID_WTW F1
+TYPE_KOELING a25
   /MAP.
 RESTORE.
 
 CACHE.
 EXECUTE.
 DATASET NAME d10 WINDOW=FRONT.
+
+dataset close aangiftepanelen.
 
 compute m_factor=replace(m_factor,".",",").
 alter type m_factor (f8.2).
@@ -46,3 +49,5 @@ dataset activate plat10.
 
 SAVE OUTFILE=datamap +  'verwerkt\10_ventilatie.sav'
   /COMPRESSED.
+
+dataset close d10.

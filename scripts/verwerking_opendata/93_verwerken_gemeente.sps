@@ -1,5 +1,7 @@
 * Encoding: windows-1252.
 
+* TODO: controleren te veel of te weinig gemeenten. Afhandelen Brussel.
+
 * dit script laat toe om de data te verwerken tot op gemeenteniveau, zonder een overeenkomst met de leverancier.
 
 GET
@@ -381,7 +383,7 @@ EXECUTE.
 
 
 
-match files
+*match files
 /file=*
 /keep=AANGIFTE_ID
 aanvraag_jaar
@@ -418,14 +420,6 @@ OPGEWEKTE_STROOM_PV_PANELEN
 VENTILATIE_SYSTEEM_d10
 AANWEZIGHEID_WTW
 types_functie_last.
-
-SAVE TRANSLATE OUTFILE=datamap +  'verwerkt\om_te_verrijken.xlsx'
-  /TYPE=XLS
-  /VERSION=12
-  /MAP
-  /FIELDNAMES VALUE=NAMES
-  /CELLS=VALUES
-/replace.
 
 
 
@@ -608,10 +602,10 @@ DATASET ACTIVATE basicgem.
 string geolevel (a14).
 compute geolevel='gemeente'.
 
-* voor 2019: enkel dat jaar meenemen, voor oude jaren blijft statsecniveau behouden.
+* voor 2020: enkel dat jaar meenemen, voor oude jaren blijft statsecniveau behouden.
 FILTER OFF.
 USE ALL.
-SELECT IF (period = 2019).
+SELECT IF (period = 2020).
 EXECUTE.
 
 recode v2207_nbw_dossier

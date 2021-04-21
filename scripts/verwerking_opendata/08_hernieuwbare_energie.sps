@@ -6,7 +6,6 @@ SET DECIMAL DOT.
 
 GET DATA  /TYPE=TXT
   /FILE=datamap +  'ruw\08_AG_INSTALL_HEB_DETAIL.csv'
-  /ENCODING='Locale'
   /DELCASE=LINE
   /DELIMITERS=","
   /QUALIFIER='"'
@@ -14,6 +13,7 @@ GET DATA  /TYPE=TXT
   /FIRSTCASE=2
   /DATATYPEMIN PERCENTAGE=95.0
   /VARIABLES=
+  TIMESTAMP_EXTRACT AUTO
   AANGIFTE_ID A20
   TOTAAL_HEB_EENH_OPP a10
   TOTAAL_EIS_HEB_EENH_OPP f8
@@ -27,6 +27,8 @@ RESTORE.
 CACHE.
 EXECUTE.
 DATASET NAME d08 WINDOW=FRONT.
+dataset close plat07.
+
 
 compute TOTAAL_HEB_EENH_OPP=replace(TOTAAL_HEB_EENH_OPP,".",",").
 compute QRE_EENH_OPP=replace(QRE_EENH_OPP,".",",").
@@ -62,3 +64,5 @@ dataset activate plat08.
 
 SAVE OUTFILE=datamap +  'verwerkt\08_productie.sav'
   /COMPRESSED.
+
+dataset close d08.

@@ -35,7 +35,6 @@ SET DECIMAL DOT.
 
 GET DATA  /TYPE=TXT
   /FILE=datamap +  'ruw\11_AG_DIMENSIES.csv'
-  /ENCODING='Locale'
   /DELCASE=LINE
   /DELIMITERS=","
   /QUALIFIER='"'
@@ -43,7 +42,9 @@ GET DATA  /TYPE=TXT
   /FIRSTCASE=2
   /DATATYPEMIN PERCENTAGE=95.0
   /VARIABLES=
+  TIMESTAMP_EXTRACT auto
   AANGIFTE_ID A20
+STATUS auto
   SOFTWARE_NAAM AUTO
   SOFTWARE_VERSIE A10
   AANGIFTE_TYPE AUTO
@@ -64,18 +65,38 @@ CACHE.
 EXECUTE.
 DATASET NAME d11 WINDOW=FRONT.
 
+dataset close plat10.
+
 string types_functie (a255).
 if $casenum=1 | AANGIFTE_ID~=lag(AANGIFTE_ID) types_functie = type_woning.
 if AANGIFTE_ID=lag(AANGIFTE_ID) types_functie = concat(ltrim(rtrim(lag(types_functie))),",",type_woning).
 EXECUTE.
 
+recode bestemming ('ANDERE'=8)
+('ANDERE MET KANTOOR'=8)
+('GD NIET RESIDENTIEEL'=8)
+('NIET RESIDENTIEEL EPN'=8)
+('INDUSTRIE'=5)
+('INDUSTRIE MET KANTOOR'=3)
+('KANTOOR'=4)
+('LANDBOUW'=7)
+('NULL'=9)
+('GD RESIDENTIEEL'=1)
+('WONEN'=1)
+('WONEN MET KANTOOR'=2)
+('SCHOOL'=6)
+into bestemming_cat.
+
+sort cases AANGIFTE_ID (a) bestemming_cat (a).
 
 DATASET ACTIVATE d11.
 DATASET DECLARE plat11.
 AGGREGATE
   /OUTFILE='plat11'
-  /BREAK=AANGIFTE_ID NIS_CODE HOOFD_GEMEENTE AANVRAAG_DATUM INGEDIEND_DATUM AARD_WERKEN BESTEMMING 
-    BOUWVORM
+  /BREAK=AANGIFTE_ID NIS_CODE HOOFD_GEMEENTE AANVRAAG_DATUM INGEDIEND_DATUM 
+   /AARD_WERKEN=first(AARD_WERKEN)
+   /BESTEMMING=first(BESTEMMING)
+   /BOUWVORM=first(BOUWVORM)
   /types_functie_last=LAST(types_functie).
 dataset activate plat11.
 
@@ -100,10 +121,8 @@ types_functie_last
 einde_11.
 
 
-compute INGEDIEND_DATUM=replace(INGEDIEND_DATUM,".",",").
-alter type INGEDIEND_DATUM (f15).
-
 SAVE OUTFILE=datamap +  'verwerkt\11_basis.sav'
   /COMPRESSED.
 
+dataset close d11.
 

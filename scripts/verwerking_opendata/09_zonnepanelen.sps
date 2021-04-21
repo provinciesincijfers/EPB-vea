@@ -11,6 +11,7 @@ GET DATA  /TYPE=TXT
   /FIRSTCASE=2
   /DATATYPEMIN PERCENTAGE=95.0
   /VARIABLES=
+TIMESTAMP_EXTRACT auto
   AANGIFTE_ID A20
   THERMISCHE_ZONNE_ENERGIE_ID F4.0
   COLLECTOR_ID F4.0
@@ -31,7 +32,7 @@ CACHE.
 EXECUTE.
 DATASET NAME d09 WINDOW=FRONT.
 
-
+dataset close plat08.
 
 * indicatoren maken.
 if THERMISCHE_ZONNE_ENERGIE_ID>0 thermische_zonne_energie=1.
@@ -96,3 +97,5 @@ EXECUTE.
 
 SAVE OUTFILE=datamap +  'verwerkt\09_zonnepanelen.sav'
   /COMPRESSED.
+
+
