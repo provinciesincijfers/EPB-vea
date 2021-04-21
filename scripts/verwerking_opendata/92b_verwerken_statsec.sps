@@ -1,15 +1,116 @@
-﻿* Encoding: UTF-8.
+* Encoding: windows-1252.
+
+* todo:
+- check mediaan statsec; check ontbreken totaal warmtepomp
+- lange termijn: statsec onbekend voor de nieuwe fusies
 
 GET
-  FILE='D:\EPB\verwerkt\verzamelbestand.sav'.
+  FILE=datamap +  'verwerkt\verzamelbestand.sav'.
 DATASET NAME basis WINDOW=FRONT.
 
 * corrigeer enkele foutjes in de dump.
-recode nis_code (24302=24104) (22002=23099).
+recode nis_code (24302	=24104) (22002=23099).
 
+
+
+
+* verwijder grotendeels lege records.
+
+FILTER OFF.
+USE ALL.
+SELECT IF (NIS_CODE > 0).
+EXECUTE.
+
+* TODO OP BASIS VAN GITHUB TABEL. zie DEFINE gebiedsniveaus () 'C:\github\gebiedsniveaus\' !ENDDEFINE.
 * verwijder foute niscodes.
-recode nis_code
-(12030=12041)
+* dit is op basis van de kerntabel:
+https://share.vlaamsbrabant.be/share/page/site/socialeplanning/document-details?nodeRef=workspace://SpacesStore/afc23173-84e1-4f47-a0f5-61e17e350a09
+* hier is het nog op basis van gemeente2018 gebeurd. In de nieuwe datadump uitkijken: wordt systematisch de nieuwe niscode gebruikt? Of een combinatie van oud en nieuw?.
+GET 
+  FILE='C:\Users\plu3532\Documents\gebiedsindelingen\verwerking\gislagen\uitgebreide_tabel.sav'. 
+DATASET NAME gem WINDOW=FRONT. 
+DATASET DECLARE gemeenten. 
+AGGREGATE 
+  /OUTFILE='gemeenten' 
+  /BREAK=gemeente gemeente_naam provincie 
+  /N_BREAK=N.
+dataset activate gemeenten.
+alter type gemeente (f8.0).
+rename variables gemeente=nis_code.
+sort cases nis_code (a).
+delete variables n_break.
+
+dataset activate basis.
+sort cases nis_code (a).
+
+MATCH FILES /FILE=*
+  /TABLE='gemeenten'
+  /BY nis_code.
+EXECUTE.
+
+* dit verwijdert zeer zeldzame volledige foute records.
+FILTER OFF.
+USE ALL.
+SELECT IF (gemeente_naam ~= "").
+EXECUTE.
+dataset close gem.
+dataset close gemeenten.
+
+* dit is de tabel die ontstaat nadat we de adressen+statsec hebben bezorgd aan VEA.
+* toevoegen statsec.
+* TODO: aanpassen naar nieuwe tabel.
+GET DATA  /TYPE=TXT
+  /FILE="C:\Users\plu3532\Documents\VEA\EPB\koppeling_statsec\output\statsec_20190704_2018.csv"
+  /ENCODING='UTF8'
+  /DELCASE=LINE
+  /DELIMITERS="|"
+  /ARRANGEMENT=DELIMITED
+  /FIRSTCASE=2
+  /DATATYPEMIN PERCENTAGE=95.0
+  /VARIABLES=
+  AANGIFTE_ID A20
+  statsec A9
+  /MAP.
+CACHE.
+EXECUTE.
+DATASET NAME statsec WINDOW=FRONT.
+
+* enkele dubbels moeten verwijderd worden; check of ze steeds aan dezelfde statsec worden toegekend.
+SORT CASES BY AANGIFTE_ID(A).
+MATCH FILES
+  /FILE=*
+  /BY AANGIFTE_ID
+  /LAST=PrimaryLast.
+VARIABLE LABELS  PrimaryLast 'Indicator of each last matching case as Primary'.
+VALUE LABELS  PrimaryLast 0 'Duplicate Case' 1 'Primary Case'.
+VARIABLE LEVEL  PrimaryLast (ORDINAL).
+EXECUTE.
+FILTER OFF.
+USE ALL.
+SELECT IF (PrimaryLast=1).
+EXECUTE.
+delete variables PrimaryLast.
+
+
+sort cases AANGIFTE_ID (a).
+
+dataset activate basis.
+sort cases AANGIFTE_ID (a).
+MATCH FILES /FILE=*
+  /TABLE='statsec'
+  /BY AANGIFTE_ID.
+EXECUTE.
+
+dataset close statsec.
+
+* nakijken statsec en niscode.
+
+* dit hele stuk werkt maar zolang nis_code meestal de oude gemeente omvat. Eigenlijk hebben we in PinC een gebied onbekend nodig op niveau van de nieuwe gemeenten.
+if statsec="" statsec=concat(string(nis_code,f5.0),"ZZZZ").
+if statsec="" statsec="99991ZZZZ".
+compute statsec_nis=number(char.substr(statsec,1,5),f5.0).
+alter type statsec_nis (f5.0).
+recode nis_code statsec_nis (12030=12041)
 (12034=12041)
 (44011=44083)
 (44049=44083)
@@ -23,406 +124,43 @@ recode nis_code
 (71047=72042)
 (72040=72042)
 (72025=72043)
-(72029=72043)
-(else=copy) into niscode_nieuwegemeenten.
+(72029=72043) (else=copy) into niscode19 statsecnis19.
 
-recode niscode_nieuwegemeenten
-(11001=10000)
-(11002=10000)
-(11004=10000)
-(11005=10000)
-(11007=10000)
-(11008=10000)
-(11009=10000)
-(11013=10000)
-(11016=10000)
-(11018=10000)
-(11021=10000)
-(11022=10000)
-(11023=10000)
-(11024=10000)
-(11025=10000)
-(11029=10000)
-(11030=10000)
-(11035=10000)
-(11037=10000)
-(11038=10000)
-(11039=10000)
-(11040=10000)
-(11044=10000)
-(11050=10000)
-(11052=10000)
-(11053=10000)
-(11054=10000)
-(11055=10000)
-(11056=10000)
-(11057=10000)
-(12002=10000)
-(12005=10000)
-(12007=10000)
-(12009=10000)
-(12014=10000)
-(12021=10000)
-(12025=10000)
-(12026=10000)
-(12029=10000)
-(12035=10000)
-(12040=10000)
-(12041=10000)
-(13001=10000)
-(13002=10000)
-(13003=10000)
-(13004=10000)
-(13006=10000)
-(13008=10000)
-(13010=10000)
-(13011=10000)
-(13012=10000)
-(13013=10000)
-(13014=10000)
-(13016=10000)
-(13017=10000)
-(13019=10000)
-(13021=10000)
-(13023=10000)
-(13025=10000)
-(13029=10000)
-(13031=10000)
-(13035=10000)
-(13036=10000)
-(13037=10000)
-(13040=10000)
-(13044=10000)
-(13046=10000)
-(13049=10000)
-(13053=10000)
-(21001=4000)
-(21002=4000)
-(21003=4000)
-(21004=4000)
-(21005=4000)
-(21006=4000)
-(21007=4000)
-(21008=4000)
-(21009=4000)
-(21010=4000)
-(21011=4000)
-(21012=4000)
-(21013=4000)
-(21014=4000)
-(21015=4000)
-(21016=4000)
-(21017=4000)
-(21018=4000)
-(21019=4000)
-(23002=20001)
-(23003=20001)
-(23009=20001)
-(23016=20001)
-(23023=20001)
-(23024=20001)
-(23025=20001)
-(23027=20001)
-(23032=20001)
-(23033=20001)
-(23038=20001)
-(23039=20001)
-(23044=20001)
-(23045=20001)
-(23047=20001)
-(23050=20001)
-(23052=20001)
-(23060=20001)
-(23062=20001)
-(23064=20001)
-(23077=20001)
-(23081=20001)
-(23086=20001)
-(23088=20001)
-(23094=20001)
-(23096=20001)
-(23097=20001)
-(23098=20001)
-(23099=20001)
-(23100=20001)
-(23101=20001)
-(23102=20001)
-(23103=20001)
-(23104=20001)
-(23105=20001)
-(24001=20001)
-(24007=20001)
-(24008=20001)
-(24009=20001)
-(24011=20001)
-(24014=20001)
-(24016=20001)
-(24020=20001)
-(24028=20001)
-(24033=20001)
-(24038=20001)
-(24041=20001)
-(24043=20001)
-(24045=20001)
-(24048=20001)
-(24054=20001)
-(24055=20001)
-(24059=20001)
-(24062=20001)
-(24066=20001)
-(24086=20001)
-(24094=20001)
-(24104=20001)
-(24107=20001)
-(24109=20001)
-(24130=20001)
-(24133=20001)
-(24134=20001)
-(24135=20001)
-(24137=20001)
-(31003=30000)
-(31004=30000)
-(31005=30000)
-(31006=30000)
-(31012=30000)
-(31022=30000)
-(31033=30000)
-(31040=30000)
-(31042=30000)
-(31043=30000)
-(32003=30000)
-(32006=30000)
-(32010=30000)
-(32011=30000)
-(32030=30000)
-(33011=30000)
-(33016=30000)
-(33021=30000)
-(33029=30000)
-(33037=30000)
-(33039=30000)
-(33040=30000)
-(33041=30000)
-(34002=30000)
-(34003=30000)
-(34009=30000)
-(34013=30000)
-(34022=30000)
-(34023=30000)
-(34025=30000)
-(34027=30000)
-(34040=30000)
-(34041=30000)
-(34042=30000)
-(34043=30000)
-(35002=30000)
-(35005=30000)
-(35006=30000)
-(35011=30000)
-(35013=30000)
-(35014=30000)
-(35029=30000)
-(36006=30000)
-(36007=30000)
-(36008=30000)
-(36010=30000)
-(36011=30000)
-(36012=30000)
-(36015=30000)
-(36019=30000)
-(37002=30000)
-(37007=30000)
-(37010=30000)
-(37011=30000)
-(37012=30000)
-(37015=30000)
-(37017=30000)
-(37018=30000)
-(37020=30000)
-(38002=30000)
-(38008=30000)
-(38014=30000)
-(38016=30000)
-(38025=30000)
-(41002=40000)
-(41011=40000)
-(41018=40000)
-(41024=40000)
-(41027=40000)
-(41034=40000)
-(41048=40000)
-(41063=40000)
-(41081=40000)
-(41082=40000)
-(42003=40000)
-(42004=40000)
-(42006=40000)
-(42008=40000)
-(42010=40000)
-(42011=40000)
-(42023=40000)
-(42025=40000)
-(42026=40000)
-(42028=40000)
-(43002=40000)
-(43005=40000)
-(43007=40000)
-(43010=40000)
-(43014=40000)
-(43018=40000)
-(44012=40000)
-(44013=40000)
-(44019=40000)
-(44020=40000)
-(44021=40000)
-(44034=40000)
-(44040=40000)
-(44043=40000)
-(44045=40000)
-(44048=40000)
-(44052=40000)
-(44064=40000)
-(44073=40000)
-(44081=40000)
-(44083=40000)
-(44084=40000)
-(44085=40000)
-(45035=40000)
-(45041=40000)
-(45059=40000)
-(45060=40000)
-(45061=40000)
-(45062=40000)
-(45063=40000)
-(45064=40000)
-(45065=40000)
-(45068=40000)
-(46003=40000)
-(46013=40000)
-(46014=40000)
-(46020=40000)
-(46021=40000)
-(46024=40000)
-(46025=40000)
-(71002=70000)
-(71004=70000)
-(71011=70000)
-(71016=70000)
-(71017=70000)
-(71020=70000)
-(71022=70000)
-(71024=70000)
-(71034=70000)
-(71037=70000)
-(71045=70000)
-(71053=70000)
-(71057=70000)
-(71066=70000)
-(71067=70000)
-(71069=70000)
-(71070=70000)
-(72003=70000)
-(72004=70000)
-(72018=70000)
-(72020=70000)
-(72021=70000)
-(72030=70000)
-(72037=70000)
-(72038=70000)
-(72039=70000)
-(72041=70000)
-(72042=70000)
-(72043=70000)
-(73001=70000)
-(73006=70000)
-(73009=70000)
-(73022=70000)
-(73028=70000)
-(73032=70000)
-(73040=70000)
-(73042=70000)
-(73066=70000)
-(73083=70000)
-(73098=70000)
-(73107=70000)
-(73109=70000)
-(99991=99991)
-(99992=4000)
-(99999=99999) into provinciecode.
-
-* Opgelet:er komen dossiers voor met NISCODE = provinciale code (dus 70000 voor een Limburgse gemeente, 40000 voor een Oost-Vlaamse gemeente, …)
-Het gaat om zeer klein aantal: 60 voor het gehele verzamelbestand. Deze worden niet meegenomen in de verwerking.
-
-FILTER OFF.
-USE ALL.
-SELECT IF (provinciecode>0).
+* er zijn slechts enkele dossiers toegekend aan een statsec buiten de gemeente.
+* net als de gevallen die niet gevonden werden, mogen deze in het onbekend gebied van de gemeente terecht komen.
+if niscode19 ~= statsecnis19 statsec=concat(string(nis_code,f5.0),"ZZZZ").
 EXECUTE.
 
-* einde verwijder foute niscodes.
+recode statsec
+('12041ZZZZ'='12030ZZZZ')
+('44084ZZZZ'='44001ZZZZ')
+('44083ZZZZ'='44011ZZZZ')
+('44085ZZZZ'='44036ZZZZ')
+('45068ZZZZ'='45017ZZZZ')
+('72042ZZZZ'='71047ZZZZ')
+('72043ZZZZ'='72025ZZZZ').
+
+
+
 
 compute afgeleide_variabelen=$sysmis.
 
 
-***** omdat de datum verknald was in 2018 ****.
-*COMPUTE aanvraag_corr=DATESUM(DATE.DMY(1,1,1970),(AANVRAAG_DATUM-25569),"days").
-*COMPUTE indien_corr=DATESUM(DATE.DMY(1,1,1970),(INGEDIEND_DATUM-25569),"days").
-* als datumveld instellen is enkel nodig voor het visuele.
-*compute aanvraag_jaar=XDATE.YEAR(aanvraag_corr).
-*compute indien_jaar=XDATE.YEAR(indien_corr).
+***** omdat de datum verknald is ****.
+COMPUTE aanvraag_corr=DATESUM(DATE.DMY(1,1,1970),(AANVRAAG_DATUM-25569),"days").
+COMPUTE indien_corr=DATESUM(DATE.DMY(1,1,1970),(INGEDIEND_DATUM-25569),"days").
+EXECUTE.
+* als datuimveld instellen is enkel nodig voor het visuele.
+compute aanvraag_jaar=XDATE.YEAR(aanvraag_corr).
+compute indien_jaar=XDATE.YEAR(indien_corr).
 
 
 **** normaal gezien ****.
-compute aanvraag_jaar=number(char.substr(AANVRAAG_DATUM,1,4),f4.0).
-compute indien_jaar=number(char.substr(INGEDIEND_DATUM,1,4),f4.0).
+*compute aanvraag_jaar=number(char.substr(AANVRAAG_DATUM,1,4),f4.0).
+*compute indien_jaar=number(char.substr(INGEDIEND_DATUM,1,4),f4.0).
 EXECUTE.
 
 
-match files
-/file=*
-/keep=AANGIFTE_ID
-aanvraag_jaar
-indien_jaar
-NIS_CODE
-niscode_nieuwegemeenten
-AARD_WERKEN
-BESTEMMING
-BOUWVORM
-E_PEIL
-E_EIS
-PRIMAIR_ENERGIE_VERBRUIK_M2
-INDICATOR_VOLDOEN_VENTILATIE
-INDICATOR_VOLDOEN_OVERVERH
-INDICATOR_VOLDOEN_U_R
-NEB_VOOR_VERWARMING
-NEB_VOOR_VERW_EENH_OPP
-BRUTO_VLOER_OPPERVLAKTE_06
-TYPE_VERWARMING_first
-TYPE_VERWARMING_last
-INDICATOR_WARMTEPOMP_max
-WARMTEPOMP_SPF_max
-aantal_records_07
-TOTAAL_HEB_EENH_OPP
-TOTAAL_EIS_HEB_EENH_OPP
-prod_biomassa
-prod_zonnepaneel
-prod_participatie
-prod_stadsnet
-prod_warmtepomp
-prod_zonnecollector
-thermische_zonne_energie
-pv_panelen
-OPGEWEKTE_STROOM_PV_PANELEN
-VENTILATIE_SYSTEEM_d10
-AANWEZIGHEID_WTW
-types_functie_last.
-
-SAVE TRANSLATE OUTFILE='D:\EPB\verwerkt\om_te_verrijken.xlsx'
-  /TYPE=XLS
-  /VERSION=12
-  /MAP
-  /FIELDNAMES VALUE=NAMES
-  /CELLS=VALUES
-/replace.
 
 
 recode aard_werken ("Nieuwbouw"=1) (else=0) into nieuwbouw.
@@ -519,11 +257,15 @@ moet_hernieuwbaar_produceren.
 compute m2=NEB_VOOR_VERWARMING/
 NEB_VOOR_VERW_EENH_OPP.
 
+
+
+
+
 * INDICATOREN SWING.
 * nieuwbouwwoningen afgewerkt in jaar X, dus norm afhankelijk van hoe lang geleden vergund.
 rename variables indien_jaar=period.
-compute geoitem= niscode_nieuwegemeenten.
-alter type geoitem (f8.0).
+rename variables statsec=geoitem.
+
 
 * enkel residentiele nieuwbouw for now.
 DATASET ACTIVATE basis.
@@ -554,6 +296,9 @@ if overschot>=10 & overschot<20 v2207_epb_norm1019=1.
 if overschot>=20 & overschot<40 v2207_epb_norm2039=1.
 if overschot>=40 v2207_epb_norm40=1.
 
+
+
+
 if type_bebouwing=0 v2207_epb_n_ander=1.
 if type_bebouwing=1 v2207_epb_n_app=1.
 if type_bebouwing=2 v2207_epb_n_gesl=1.
@@ -566,29 +311,13 @@ if type_bebouwing=2 v2207_epb_sompeil_gesl=E_PEIL.
 if type_bebouwing=3 v2207_epb_sompeil_hopen=E_PEIL.
 if type_bebouwing=4 v2207_epb_sompeil_open=E_PEIL.
 
-* Bereken ook mediaan voor andere gebiedsniveaus (provincies, gewest).
-
-DATASET DECLARE provmed.
-AGGREGATE
-  /OUTFILE='provmed'
-  /BREAK=period provinciecode
- /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
-
-FILTER OFF.
-USE ALL.
-SELECT IF (period = 2019).
-EXECUTE.
-
-SAVE TRANSLATE OUTFILE='D:\EPB\mediaan_peil_provincies.xlsx'
-  /TYPE=XLS
-  /VERSION=12
-  /MAP
-  /FIELDNAMES VALUE=NAMES
-  /CELLS=VALUES
-/replace.
 
 
-* einde: berekenen mediaan voor andere gebiedsniveaus.
+
+
+
+* TODO: mediaan voor andere gebiedsniveaus.
+
 
 DATASET DECLARE basicgem.
 AGGREGATE
@@ -614,13 +343,13 @@ AGGREGATE
   /v2207_nbw_sompeil_open=sum(v2207_epb_sompeil_open)
   /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
 DATASET ACTIVATE basicgem.
-string geolevel (a14).
-compute geolevel='gemeente'.
+string geolevel (a25).
+compute geolevel='statsec'.
 
-* voor 2019: enkel dat jaar meenemen, voor oude jaren blijft statsecniveau behouden.
+* enkel vanaf 2010 meenemen plus verwijder onvolledig jaar.
 FILTER OFF.
 USE ALL.
-SELECT IF (period = 2019).
+SELECT IF (period >2009 & period < 2019).
 EXECUTE.
 
 recode v2207_nbw_dossier
@@ -661,7 +390,7 @@ v2207_nbw_sompeil_open
 v2207_nbw_peil_mediaan (f8.0).
 
 
-SAVE TRANSLATE OUTFILE='D:\EPB\basicgem.xlsx'
+SAVE TRANSLATE OUTFILE=datamap +  'upload\basic_statsec.xlsx'
   /TYPE=XLS
   /VERSION=12
   /MAP
@@ -670,7 +399,7 @@ SAVE TRANSLATE OUTFILE='D:\EPB\basicgem.xlsx'
 /replace.
 
 
-SAVE TRANSLATE OUTFILE='C:\temp\epb\\basicgem.csv'
+SAVE TRANSLATE OUTFILE=datamap +  'upload\basicgem.csv'
   /TYPE=CSV
   /ENCODING='Locale'
   /MAP
@@ -680,6 +409,7 @@ SAVE TRANSLATE OUTFILE='C:\temp\epb\\basicgem.csv'
 /replace.
 
 
+
 dataset activate basis.
 
 if  primair_energie_cat = 1 v2207_nbw_primair_0_15 = 1.
@@ -687,7 +417,7 @@ if  primair_energie_cat = 2 v2207_nbw_primair_15_70 = 1.
 if  primair_energie_cat = 3 v2207_nbw_primair_70p = 1.
 if  primair_energie_cat = 9 v2207_nbw_primair_onb = 1.
 
-* TODO: klasse-indeling E_peil kleiner-50-60-70-80-groter.
+*  klasse-indeling E_peil kleiner-50-60-70-80-groter.
 if e_peil>-0.01 & e_peil<50 v2207_nbw_ep_0_50=1.
 if e_peil>50 & e_peil<=60 v2207_nbw_ep_50_60=1.
 if e_peil>60 & e_peil<=70 v2207_nbw_ep_60_70=1.
@@ -758,9 +488,9 @@ if VENTILATIE_SYSTEEM_d10='geen' v2207_nbw_vent_onb=1.
 
 
 
-DATASET DECLARE detailgem.
+DATASET DECLARE basicgem.
 AGGREGATE
-  /OUTFILE='detailgem'
+  /OUTFILE='basicgem'
   /BREAK=period geoitem
 /v2207_nbw_primair_0_15=sum(v2207_nbw_primair_0_15)
 /v2207_nbw_primair_15_70=sum(v2207_nbw_primair_15_70)
@@ -814,13 +544,13 @@ AGGREGATE
 /v2207_nbw_opp_gesl=sum(v2207_nbw_opp_gesl)
 /v2207_nbw_opp_hopen=sum(v2207_nbw_opp_hopen)
 /v2207_nbw_opp_open=sum(v2207_nbw_opp_open).
-DATASET ACTIVATE detailgem.
-string geolevel (a14).
-compute geolevel='gemeente'.
+DATASET ACTIVATE basicgem.
+string geolevel (a25).
+compute geolevel='statsec'.
 * enkel vanaf 2010 meenemen.
 FILTER OFF.
 USE ALL.
-SELECT IF (period = 2019).
+SELECT IF (period >2009 & period < 2019).
 EXECUTE.
 
 
@@ -870,8 +600,7 @@ v2207_nbw_vent_a
 v2207_nbw_vent_b
 v2207_nbw_vent_c
 v2207_nbw_vent_d
-v2207_nbw_vent_onb 
-v2207_nbw_opp_ander
+v2207_nbw_vent_onb v2207_nbw_opp_ander
 v2207_nbw_opp_app
 v2207_nbw_opp_gesl
 v2207_nbw_opp_hopen
@@ -923,15 +652,14 @@ v2207_nbw_vent_a
 v2207_nbw_vent_b
 v2207_nbw_vent_c
 v2207_nbw_vent_d
-v2207_nbw_vent_onb 
-v2207_nbw_opp_ander
+v2207_nbw_vent_onb v2207_nbw_opp_ander
 v2207_nbw_opp_app
 v2207_nbw_opp_gesl
 v2207_nbw_opp_hopen
 v2207_nbw_opp_open (f8.0).
 
 
-SAVE TRANSLATE OUTFILE='D:\EPB\detailgem.xlsx'
+SAVE TRANSLATE OUTFILE=datamap +  'upload\detail_statsec.xlsx'
   /TYPE=XLS
   /VERSION=12
   /MAP
@@ -940,12 +668,320 @@ SAVE TRANSLATE OUTFILE='D:\EPB\detailgem.xlsx'
 /replace.
 
 
-SAVE TRANSLATE OUTFILE='C:\temp\epb\detailgem.csv'
+
+* uitbreiding voor niet aggregeerbare data.
+* TODO VERWIJZEN NAAR GITHUB SOURCED FILE.
+* voeg alle gebiedsniveaus toe.
+GET
+  FILE='C:\temp\gebiedsniveaus\kerntabellen\verwerkt_alle_gebiedsniveaus.sav'.
+DATASET NAME gebiedsniveaus WINDOW=FRONT.
+sort cases statsec (a).
+dataset activate basis.
+dataset close basicgem.
+rename variables geoitem=statsec.
+sort cases statsec (a).
+delete variables provincie.
+
+DATASET ACTIVATE basis.
+MATCH FILES /FILE=*
+  /TABLE='gebiedsniveaus'
+  /BY statsec.
+EXECUTE.
+dataset close gebiedsniveaus.
+
+* verzamel de data.
+* start.
+rename variables ggw7=geoitem.
+alter type geoitem (a15).
+DATASET DECLARE mediaan.
+AGGREGATE
+  /OUTFILE='mediaan'
+  /BREAK=period geoitem
+  /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
+DATASET ACTIVATE mediaan.
+string geolevel (a25).
+compute geolevel='ggw7'.
+dataset activate basis.
+delete variables geoitem.
+
+* voeg toe.
+rename variables deelgemeente=geoitem.
+alter type geoitem (a15).
+DATASET DECLARE mediaan1.
+AGGREGATE
+  /OUTFILE='mediaan1'
+  /BREAK=period geoitem
+  /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
+DATASET ACTIVATE mediaan1.
+string geolevel (a25).
+compute geolevel='deelgemeente'.
+DATASET ACTIVATE mediaan.
+ADD FILES /FILE=*
+  /FILE='mediaan1'.
+EXECUTE.
+dataset activate basis.
+delete variables geoitem.
+
+rename variables gemeente2018=geoitem.
+alter type geoitem (a15).
+DATASET DECLARE mediaan1.
+AGGREGATE
+  /OUTFILE='mediaan1'
+  /BREAK=period geoitem
+  /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
+DATASET ACTIVATE mediaan1.
+string geolevel (a25).
+compute geolevel='gemeente2018'.
+DATASET ACTIVATE mediaan.
+ADD FILES /FILE=*
+  /FILE='mediaan1'.
+EXECUTE.
+dataset activate basis.
+delete variables geoitem.
+
+
+rename variables gemeente=geoitem.
+alter type geoitem (a15).
+DATASET DECLARE mediaan1.
+AGGREGATE
+  /OUTFILE='mediaan1'
+  /BREAK=period geoitem
+  /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
+DATASET ACTIVATE mediaan1.
+string geolevel (a25).
+compute geolevel='gemeente'.
+DATASET ACTIVATE mediaan.
+ADD FILES /FILE=*
+  /FILE='mediaan1'.
+EXECUTE.
+dataset activate basis.
+delete variables geoitem.
+
+rename variables provincie=geoitem.
+alter type geoitem (a15).
+DATASET DECLARE mediaan1.
+AGGREGATE
+  /OUTFILE='mediaan1'
+  /BREAK=period geoitem
+  /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
+DATASET ACTIVATE mediaan1.
+string geolevel (a25).
+compute geolevel='provincie'.
+DATASET ACTIVATE mediaan.
+ADD FILES /FILE=*
+  /FILE='mediaan1'.
+EXECUTE.
+dataset activate basis.
+delete variables geoitem.
+
+rename variables arrondiss2018=geoitem.
+alter type geoitem (a15).
+DATASET DECLARE mediaan1.
+AGGREGATE
+  /OUTFILE='mediaan1'
+  /BREAK=period geoitem
+  /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
+DATASET ACTIVATE mediaan1.
+string geolevel (a25).
+compute geolevel='arrondiss2018'.
+DATASET ACTIVATE mediaan.
+ADD FILES /FILE=*
+  /FILE='mediaan1'.
+EXECUTE.
+dataset activate basis.
+delete variables geoitem.
+
+rename variables arrondiss=geoitem.
+alter type geoitem (a15).
+DATASET DECLARE mediaan1.
+AGGREGATE
+  /OUTFILE='mediaan1'
+  /BREAK=period geoitem
+  /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
+DATASET ACTIVATE mediaan1.
+string geolevel (a25).
+compute geolevel='arrondiss'.
+DATASET ACTIVATE mediaan.
+ADD FILES /FILE=*
+  /FILE='mediaan1'.
+EXECUTE.
+dataset activate basis.
+delete variables geoitem.
+
+rename variables fo_gem=geoitem.
+alter type geoitem (a15).
+DATASET DECLARE mediaan1.
+AGGREGATE
+  /OUTFILE='mediaan1'
+  /BREAK=period geoitem
+  /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
+DATASET ACTIVATE mediaan1.
+string geolevel (a25).
+compute geolevel='fo_gem'.
+DATASET ACTIVATE mediaan.
+ADD FILES /FILE=*
+  /FILE='mediaan1'.
+EXECUTE.
+dataset activate basis.
+delete variables geoitem.
+
+rename variables politiezone=geoitem.
+alter type geoitem (a15).
+DATASET DECLARE mediaan1.
+AGGREGATE
+  /OUTFILE='mediaan1'
+  /BREAK=period geoitem
+  /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
+DATASET ACTIVATE mediaan1.
+string geolevel (a25).
+compute geolevel='politiezone'.
+DATASET ACTIVATE mediaan.
+ADD FILES /FILE=*
+  /FILE='mediaan1'.
+EXECUTE.
+dataset activate basis.
+delete variables geoitem.
+
+rename variables gewest=geoitem.
+alter type geoitem (a15).
+DATASET DECLARE mediaan1.
+AGGREGATE
+  /OUTFILE='mediaan1'
+  /BREAK=period geoitem
+  /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
+DATASET ACTIVATE mediaan1.
+string geolevel (a25).
+compute geolevel='gewest'.
+DATASET ACTIVATE mediaan.
+ADD FILES /FILE=*
+  /FILE='mediaan1'.
+EXECUTE.
+dataset activate basis.
+delete variables geoitem.
+
+rename variables elz=geoitem.
+alter type geoitem (a15).
+DATASET DECLARE mediaan1.
+AGGREGATE
+  /OUTFILE='mediaan1'
+  /BREAK=period geoitem
+  /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
+DATASET ACTIVATE mediaan1.
+string geolevel (a25).
+compute geolevel='elz'.
+DATASET ACTIVATE mediaan.
+ADD FILES /FILE=*
+  /FILE='mediaan1'.
+EXECUTE.
+dataset activate basis.
+delete variables geoitem.
+
+rename variables uitrustingsniveau=geoitem.
+alter type geoitem (a15).
+DATASET DECLARE mediaan1.
+AGGREGATE
+  /OUTFILE='mediaan1'
+  /BREAK=period geoitem
+  /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
+DATASET ACTIVATE mediaan1.
+string geolevel (a25).
+compute geolevel='uitrustingsniveau'.
+DATASET ACTIVATE mediaan.
+ADD FILES /FILE=*
+  /FILE='mediaan1'.
+EXECUTE.
+dataset activate basis.
+delete variables geoitem.
+
+rename variables logo=geoitem.
+alter type geoitem (a15).
+DATASET DECLARE mediaan1.
+AGGREGATE
+  /OUTFILE='mediaan1'
+  /BREAK=period geoitem
+  /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
+DATASET ACTIVATE mediaan1.
+string geolevel (a25).
+compute geolevel='logo'.
+DATASET ACTIVATE mediaan.
+ADD FILES /FILE=*
+  /FILE='mediaan1'.
+EXECUTE.
+dataset activate basis.
+delete variables geoitem.
+
+rename variables gemeente_cluster=geoitem.
+alter type geoitem (a15).
+DATASET DECLARE mediaan1.
+AGGREGATE
+  /OUTFILE='mediaan1'
+  /BREAK=period geoitem
+  /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
+DATASET ACTIVATE mediaan1.
+string geolevel (a25).
+compute geolevel='gemeente_cluster'.
+DATASET ACTIVATE mediaan.
+ADD FILES /FILE=*
+  /FILE='mediaan1'.
+EXECUTE.
+dataset activate basis.
+delete variables geoitem.
+
+
+
+rename variables vervoerregio=geoitem.
+alter type geoitem (a15).
+DATASET DECLARE mediaan1.
+AGGREGATE
+  /OUTFILE='mediaan1'
+  /BREAK=period geoitem
+  /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
+DATASET ACTIVATE mediaan1.
+string geolevel (a25).
+compute geolevel='vervoerregio'.
+DATASET ACTIVATE mediaan.
+ADD FILES /FILE=*
+  /FILE='mediaan1'.
+EXECUTE.
+dataset activate basis.
+delete variables geoitem.
+
+
+* afwerken verzamelbestand.
+dataset activate mediaan.
+dataset close mediaan1.
+* opkuisen code.
+compute geoitem=ltrim(rtrim(geoitem)).
+
+* verwijderen gebieden die niet toegekend worden in dit gebiedsniveau.
+FILTER OFF.
+USE ALL.
+SELECT IF (geoitem ~= "").
+EXECUTE.
+
+* enkel vanaf 2010 meenemen.
+FILTER OFF.
+USE ALL.
+SELECT IF (period >2009 & period < 2019).
+EXECUTE.
+
+* handig sorteren voor swing.
+sort cases period (a) geolevel (a) geoitem (a).
+
+SAVE TRANSLATE OUTFILE=datamap +  'upload\niet_aggregeerbaar.xlsx'
+  /TYPE=XLS
+  /VERSION=12
+  /MAP
+  /FIELDNAMES VALUE=NAMES
+  /CELLS=VALUES
+/replace.
+
+
+
+SAVE TRANSLATE OUTFILE=datamap +  'upload\niet_aggregeerbaar.csv'
   /TYPE=CSV
   /ENCODING='Locale'
   /MAP
   /REPLACE
   /FIELDNAMES
-  /CELLS=VALUES
-/replace.
-
+  /CELLS=VALUES.
