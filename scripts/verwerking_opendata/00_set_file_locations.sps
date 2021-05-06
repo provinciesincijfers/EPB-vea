@@ -1,7 +1,7 @@
 * Encoding: windows-1252.
 
 * map met alle EPB data.
-DEFINE datamap () 'F:\data\epb\' !ENDDEFINE.
+DEFINE datamap () 'E:\data\epb\' !ENDDEFINE.
 * zet de ruwe bestanden in submap "ruw".
 * maak een map "verwerkt" voor de verwerkte tussenbestanden.
 * maak een map "upload" voor productieklare bestanden.

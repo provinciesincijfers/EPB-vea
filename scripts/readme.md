@@ -1,6 +1,5 @@
 1. Download deze bestanden:
 
-
 [2](https://open-data.energiesparen.be/Data/02_GEMIDDELD_E_PEIL_PER_GEMEENTE.csv)
 [4](https://open-data.energiesparen.be/Data/04_AANTAL_AG_PER_GEMEENTE.csv)
 [5](https://open-data.energiesparen.be/Data/05_AG_OVERZICHT_RESULTATEN_DETAIL.csv)
@@ -11,7 +10,8 @@
 [10](https://open-data.energiesparen.be/Data/10_AG_INSTALL_VENTILATIE.csv)
 [11](https://open-data.energiesparen.be/Data/11_AG_DIMENSIES.csv)
 
-2. Run de scripts in volgorde. Alle nodige saves worden door het script gedaan. Je zal de verwijzingen naar de bestanden nog moeten aanpassen.
+
+2. Run de scripts in volgorde. Alle nodige saves worden door het script gedaan. In script 00 kan je voor alle verdere scripts aangeven waar de bestanden te vinden zullen zijn.
 
 OPGELET: soms wijzigt het datamodel van de leverancier. Dit is niet altijd direct duidelijk op basis van de foutmeldingen.
 Het datumformaat is wellicht gewijzigd.
