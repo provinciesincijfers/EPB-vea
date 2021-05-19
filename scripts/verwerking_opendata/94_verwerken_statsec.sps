@@ -2,14 +2,14 @@
 
 * todo:
 - check mediaan statsec; check ontbreken totaal warmtepomp
-
+- brussel op juiste missing zetten.
 
 GET
   FILE=datamap +  'verwerkt\verzamelbestand.sav'.
 DATASET NAME basis WINDOW=FRONT.
 
 * corrigeer enkele foutjes in de dump.
-recode nis_code (24302=24104) (22002=23099) into x.
+recode nis_code (24302=24104) (22002=23099).
 
 
 
@@ -366,10 +366,9 @@ recode niscode_nieuwegemeenten
 (99992=4000)
 (99999=99999) into provinciecode.
 
-FILTER OFF.
-USE ALL.
-SELECT IF (provinciecode>0).
-EXECUTE.
+frequencies provinciecode.
+
+
 
 * einde verwijder foute niscodes.
 
@@ -494,7 +493,7 @@ recode statsec
 
 * nakijken statsec en niscode.
 
-if statsec="" statsec=concat(string(nis_code,f5.0),"ZZZZ").
+if statsec="" & provinciecode>0 statsec=concat(string(nis_code,f5.0),"ZZZZ").
 if statsec="" statsec="99991ZZZZ".
 compute statsec_nis=number(char.substr(statsec,1,5),f5.0).
 alter type statsec_nis (f5.0).
@@ -518,7 +517,8 @@ recode statsec_nis (12030=12041)
 * net als de gevallen die niet gevonden werden, mogen deze in het onbekend gebied van de gemeente terecht komen.
 if niscode_nieuwegemeenten ~= statsec_nis error=1.
 EXECUTE.
-if niscode_nieuwegemeenten ~= statsec_nis statsec=concat(string(nis_code,f5.0),"ZZZZ").
+
+if provinciecode>0 & niscode_nieuwegemeenten ~= statsec_nis statsec=concat(string(nis_code,f5.0),"ZZZZ").
 EXECUTE.
 
 
@@ -638,7 +638,7 @@ TOTAAL_EIS_HEB_EENH_OPP (missing=99) (0=0) (else=1) into
 produceert_hernieuwbaar
 moet_hernieuwbaar_produceren.
 
-compute m2=NEB_VOOR_VERWARMING/
+compute m2_check=NEB_VOOR_VERWARMING/
 NEB_VOOR_VERW_EENH_OPP.
 
 
@@ -669,6 +669,10 @@ compute BRUTO_VLOER_OPPERVLAKTE_06=$sysmis.
 compute NEB_VOOR_VERW_EENH_OPP=$sysmis.
 compute PRIMAIR_ENERGIE_VERBRUIK_M2=$sysmis.
 end if.
+
+
+* enkele missings corrigeren.
+if missing(TOTAAL_PRIMAIR_ENERGIEVERBRUIK) TOTAAL_PRIMAIR_ENERGIEVERBRUIK=BRUTO_VLOER_OPPERVLAKTE_06*PRIMAIR_ENERGIE_VERBRUIK_M2*3.6.
 
 compute v2207_epb_dossier=1.
 compute v2207_epb_peil_som=e_peil.
@@ -715,7 +719,7 @@ EXECUTE.
 DATASET NAME verrijken WINDOW=FRONT.
 sort cases statsec (a).
 
-* we p^lakken die lijst voor elk jaar dat we nodig hebben onder elkaar.
+* we plakken die lijst voor elk jaar dat we nodig hebben onder elkaar.
 compute indien_jaar=2010.
 dataset copy kopie.
 dataset activate kopie.
@@ -796,6 +800,8 @@ ADD FILES /FILE=*
 EXECUTE.
 dataset close verrijken.
 
+if gewest=4000 brussel=1.
+
 * nieuwbouwwoningen afgewerkt in jaar X, dus norm afhankelijk van hoe lang geleden vergund.
 rename variables indien_jaar=period.
 rename variables statsec=geoitem.
@@ -813,6 +819,7 @@ DATASET DECLARE basicgem.
 AGGREGATE
   /OUTFILE='basicgem'
   /BREAK=period geoitem
+/brussel=max(brussel)
   /v2207_nbw_dossier=SUM(v2207_epb_dossier) 
   /v2207_nbw_peil_som=SUM(v2207_epb_peil_som) 
   /v2207_nbw_doel_som=SUM(v2207_epb_doel_som) 
@@ -836,9 +843,31 @@ DATASET ACTIVATE basicgem.
 string geolevel (a25).
 compute geolevel='statsec'.
 
+if brussel=1 v2207_nbw_dossier=-99999.
+if char.substr(geoitem,6,4)="ZZZZ" & missing(v2207_nbw_dossier) v2207_nbw_dossier=-99996.
+if missing(v2207_nbw_dossier) v2207_nbw_dossier=0.
 
-recode v2207_nbw_dossier (missing=0).
 
+do if v2207_nbw_dossier=-99999.
+recode
+v2207_nbw_peil_som
+v2207_nbw_doel_som
+v2207_nbw_norm
+v2207_nbw_norm10
+v2207_nbw_norm1019
+v2207_nbw_norm2039
+v2207_nbw_norm40 
+v2207_nbw_n_ander
+v2207_nbw_n_app
+v2207_nbw_n_gesl
+v2207_nbw_n_hopen
+v2207_nbw_n_open
+v2207_nbw_sompeil_ander
+v2207_nbw_sompeil_app
+v2207_nbw_sompeil_gesl
+v2207_nbw_sompeil_hopen
+v2207_nbw_sompeil_open (ELSE=-99999).
+end if.
 do if v2207_nbw_dossier>0.
 recode
 v2207_nbw_peil_som
@@ -858,7 +887,9 @@ v2207_nbw_sompeil_app
 v2207_nbw_sompeil_gesl
 v2207_nbw_sompeil_hopen
 v2207_nbw_sompeil_open (missing=0).
-else if.
+end if.
+do if v2207_nbw_dossier=0 OR v2207_nbw_dossier=-99996.
+recode
 v2207_nbw_peil_som
 v2207_nbw_doel_som
 v2207_nbw_norm
@@ -898,6 +929,7 @@ v2207_nbw_sompeil_hopen
 v2207_nbw_sompeil_open
 v2207_nbw_peil_mediaan (f8.0).
 
+DELETE VARIABLES brussel.
 
 SAVE TRANSLATE OUTFILE=datamap +  'upload\basic_statsec.xlsx'
   /TYPE=XLS
@@ -931,7 +963,9 @@ compute v2207_nbw_vold_verhit=INDICATOR_VOLDOEN_OVERVERH.
 compute v2207_nbw_vold_rwaarde=INDICATOR_VOLDOEN_U_R.
 
 * energieverbruik per type.
-compute v2207_nbw_primair_energieverbruik=TOTAAL_PRIMAIR_ENERGIEVERBRUIK.
+
+
+compute v2207_nbw_primair_energieverbruik=TOTAAL_PRIMAIR_ENERGIEVERBRUIK/3.6.
 if type_bebouwing=0 v2207_nbw_prim_ander=v2207_nbw_primair_energieverbruik.
 if type_bebouwing=1 v2207_nbw_prim_app=v2207_nbw_primair_energieverbruik.
 if type_bebouwing=2 v2207_nbw_prim_gesl=v2207_nbw_primair_energieverbruik.
@@ -992,6 +1026,7 @@ DATASET DECLARE basicgem.
 AGGREGATE
   /OUTFILE='basicgem'
   /BREAK=period geoitem
+/brussel=max(brussel)
  /v2207_nbw_dossier=SUM(v2207_epb_dossier) 
 /v2207_nbw_primair_0_15=sum(v2207_nbw_primair_0_15)
 /v2207_nbw_primair_15_70=sum(v2207_nbw_primair_15_70)
@@ -1050,13 +1085,67 @@ string geolevel (a25).
 compute geolevel='statsec'.
 
 
-DATASET ACTIVATE basicgem.
+
 FILTER OFF.
 USE ALL.
-SELECT IF (v2207_nbw_dossier > 0).
+SELECT IF (v2207_nbw_dossier > 0 OR brussel=1).
 EXECUTE.
 delete variables v2207_nbw_dossier.
 
+do if brussel=1.
+recode v2207_nbw_primair_0_15
+v2207_nbw_primair_15_70
+v2207_nbw_primair_70p
+v2207_nbw_primair_onb
+v2207_nbw_ep_0_50
+v2207_nbw_ep_50_60
+v2207_nbw_ep_60_70
+v2207_nbw_ep_70_80
+v2207_nbw_ep_80p
+v2207_nbw_ep_onb
+v2207_nbw_vold_ventilatie
+v2207_nbw_vold_verhit
+v2207_nbw_vold_rwaarde
+v2207_nbw_primair_energieverbruik
+v2207_nbw_prim_ander
+v2207_nbw_prim_app
+v2207_nbw_prim_gesl
+v2207_nbw_prim_hopen
+v2207_nbw_prim_open
+v2207_nbw_oppervlakte
+v2207_nbw_oppe_ander
+v2207_nbw_oppe_app
+v2207_nbw_oppe_gesl
+v2207_nbw_oppe_hopen
+v2207_nbw_oppe_open
+v2207_nbw_app_gemeensch
+v2207_nbw_wp_app
+v2207_nbw_wp_gesl
+v2207_nbw_wp_hopen
+v2207_nbw_wp_open
+v2207_nbw_zoncol
+v2207_nbw_zoncol_ander
+v2207_nbw_zoncol_app
+v2207_nbw_zoncol_gesl
+v2207_nbw_zoncol_hopen
+v2207_nbw_zoncol_open
+v2207_nbw_pv
+v2207_nbw_pv_ander
+v2207_nbw_pv_app
+v2207_nbw_pv_gesl
+v2207_nbw_pv_hopen
+v2207_nbw_pv_open
+v2207_nbw_vent_a
+v2207_nbw_vent_b
+v2207_nbw_vent_c
+v2207_nbw_vent_d
+v2207_nbw_vent_onb v2207_nbw_opp_ander
+v2207_nbw_opp_app
+v2207_nbw_opp_gesl
+v2207_nbw_opp_hopen
+v2207_nbw_opp_open
+ (missing=-99999).
+end if.
 
 recode v2207_nbw_primair_0_15
 v2207_nbw_primair_15_70
@@ -1162,6 +1251,7 @@ v2207_nbw_opp_gesl
 v2207_nbw_opp_hopen
 v2207_nbw_opp_open (f8.0).
 
+DELETE VARIABLES brussel.
 
 SAVE TRANSLATE OUTFILE=datamap +  'upload\detail_statsec.xlsx'
   /TYPE=XLS
