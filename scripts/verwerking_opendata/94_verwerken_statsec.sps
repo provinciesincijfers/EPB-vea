@@ -1,9 +1,5 @@
 * Encoding: windows-1252.
 
-* todo:
-- check mediaan statsec; check ontbreken totaal warmtepomp
-- brussel op juiste missing zetten.
-
 GET
   FILE=datamap +  'verwerkt\verzamelbestand.sav'.
 DATASET NAME basis WINDOW=FRONT.
@@ -15,8 +11,7 @@ recode nis_code (24302=24104) (22002=23099).
 
 compute afgeleide_variabelen=$sysmis.
 
-* verwijder grotendeels lege records.
-
+* verwijder grotendeels lege records (N=0 in 2021).
 FILTER OFF.
 USE ALL.
 SELECT IF (NIS_CODE > 0).
@@ -493,7 +488,11 @@ recode statsec
 
 * nakijken statsec en niscode.
 
-if statsec="" & provinciecode>0 statsec=concat(string(nis_code,f5.0),"ZZZZ").
+* lege statsec geven geen meerwaarde en kunnen nog gebied onbekend van gemeente2018 bevatten.
+if char.index(statsec,"ZZZZ")=6 statsec="".
+EXECUTE.
+
+if statsec="" & provinciecode>0 statsec=concat(string(niscode_nieuwegemeenten,f5.0),"ZZZZ").
 if statsec="" statsec="99991ZZZZ".
 compute statsec_nis=number(char.substr(statsec,1,5),f5.0).
 alter type statsec_nis (f5.0).
@@ -837,8 +836,7 @@ AGGREGATE
   /v2207_nbw_sompeil_app=sum(v2207_epb_sompeil_app)
   /v2207_nbw_sompeil_gesl=sum(v2207_epb_sompeil_gesl)
   /v2207_nbw_sompeil_hopen=sum(v2207_epb_sompeil_hopen)
-  /v2207_nbw_sompeil_open=sum(v2207_epb_sompeil_open)
-  /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
+  /v2207_nbw_sompeil_open=sum(v2207_epb_sompeil_open).
 DATASET ACTIVATE basicgem.
 string geolevel (a25).
 compute geolevel='statsec'.
@@ -868,7 +866,7 @@ v2207_nbw_sompeil_gesl
 v2207_nbw_sompeil_hopen
 v2207_nbw_sompeil_open (ELSE=-99999).
 end if.
-do if v2207_nbw_dossier>0.
+do if v2207_nbw_dossier>=0.
 recode
 v2207_nbw_peil_som
 v2207_nbw_doel_som
@@ -888,7 +886,7 @@ v2207_nbw_sompeil_gesl
 v2207_nbw_sompeil_hopen
 v2207_nbw_sompeil_open (missing=0).
 end if.
-do if v2207_nbw_dossier=0 OR v2207_nbw_dossier=-99996.
+do if v2207_nbw_dossier=-99996.
 recode
 v2207_nbw_peil_som
 v2207_nbw_doel_som
@@ -926,8 +924,9 @@ v2207_nbw_sompeil_ander
 v2207_nbw_sompeil_app
 v2207_nbw_sompeil_gesl
 v2207_nbw_sompeil_hopen
-v2207_nbw_sompeil_open
-v2207_nbw_peil_mediaan (f8.0).
+v2207_nbw_sompeil_open (f8.0).
+
+
 
 DELETE VARIABLES brussel.
 
@@ -1085,12 +1084,10 @@ string geolevel (a25).
 compute geolevel='statsec'.
 
 
+if brussel=1 v2207_nbw_dossier=-99999.
+if char.substr(geoitem,6,4)="ZZZZ" & missing(v2207_nbw_dossier) v2207_nbw_dossier=-99996.
+if missing(v2207_nbw_dossier) v2207_nbw_dossier=0.
 
-FILTER OFF.
-USE ALL.
-SELECT IF (v2207_nbw_dossier > 0 OR brussel=1).
-EXECUTE.
-delete variables v2207_nbw_dossier.
 
 do if brussel=1.
 recode v2207_nbw_primair_0_15
@@ -1147,6 +1144,7 @@ v2207_nbw_opp_open
  (missing=-99999).
 end if.
 
+do if v2207_nbw_dossier>=0.
 recode v2207_nbw_primair_0_15
 v2207_nbw_primair_15_70
 v2207_nbw_primair_70p
@@ -1199,6 +1197,64 @@ v2207_nbw_opp_gesl
 v2207_nbw_opp_hopen
 v2207_nbw_opp_open
  (missing=0).
+end if.
+
+do if v2207_nbw_dossier=-99996.
+recode v2207_nbw_primair_0_15
+v2207_nbw_primair_15_70
+v2207_nbw_primair_70p
+v2207_nbw_primair_onb
+v2207_nbw_ep_0_50
+v2207_nbw_ep_50_60
+v2207_nbw_ep_60_70
+v2207_nbw_ep_70_80
+v2207_nbw_ep_80p
+v2207_nbw_ep_onb
+v2207_nbw_vold_ventilatie
+v2207_nbw_vold_verhit
+v2207_nbw_vold_rwaarde
+v2207_nbw_primair_energieverbruik
+v2207_nbw_prim_ander
+v2207_nbw_prim_app
+v2207_nbw_prim_gesl
+v2207_nbw_prim_hopen
+v2207_nbw_prim_open
+v2207_nbw_oppervlakte
+v2207_nbw_oppe_ander
+v2207_nbw_oppe_app
+v2207_nbw_oppe_gesl
+v2207_nbw_oppe_hopen
+v2207_nbw_oppe_open
+v2207_nbw_app_gemeensch
+v2207_nbw_wp_app
+v2207_nbw_wp_gesl
+v2207_nbw_wp_hopen
+v2207_nbw_wp_open
+v2207_nbw_zoncol
+v2207_nbw_zoncol_ander
+v2207_nbw_zoncol_app
+v2207_nbw_zoncol_gesl
+v2207_nbw_zoncol_hopen
+v2207_nbw_zoncol_open
+v2207_nbw_pv
+v2207_nbw_pv_ander
+v2207_nbw_pv_app
+v2207_nbw_pv_gesl
+v2207_nbw_pv_hopen
+v2207_nbw_pv_open
+v2207_nbw_vent_a
+v2207_nbw_vent_b
+v2207_nbw_vent_c
+v2207_nbw_vent_d
+v2207_nbw_vent_onb v2207_nbw_opp_ander
+v2207_nbw_opp_app
+v2207_nbw_opp_gesl
+v2207_nbw_opp_hopen
+v2207_nbw_opp_open
+ (missing=-99996).
+end if.
+
+
 alter type v2207_nbw_primair_0_15
 v2207_nbw_primair_15_70
 v2207_nbw_primair_70p
@@ -1262,7 +1318,7 @@ SAVE TRANSLATE OUTFILE=datamap +  'upload\detail_statsec.xlsx'
 /replace.
 
 
-* verzamel de data.
+* verzamel de mediaan data.
 * start.
 dataset activate basis.
 delete variables geoitem.
@@ -1485,7 +1541,6 @@ SELECT IF (geoitem ~= "" & v2207_nbw_peil_mediaan>0).
 EXECUTE.
 
 
-
 * handig sorteren voor swing.
 sort cases period (a) geolevel (a) geoitem (a).
 
@@ -1496,7 +1551,3 @@ SAVE TRANSLATE OUTFILE=datamap +  'upload\niet_aggregeerbaar.xlsx'
   /FIELDNAMES VALUE=NAMES
   /CELLS=VALUES
 /replace.
-
-
-
-
