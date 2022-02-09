@@ -13,5 +13,4 @@
 
 2. Run de scripts in volgorde. Alle nodige saves worden door het script gedaan. In script 00 kan je voor alle verdere scripts aangeven waar de bestanden te vinden zullen zijn.
 
-OPGELET: soms wijzigt het datamodel van de leverancier. Dit is niet altijd direct duidelijk op basis van de foutmeldingen.
-Het datumformaat is wellicht gewijzigd.
+OPGELET: soms wijzigt het datamodel van de leverancier. Dit is niet altijd direct duidelijk op basis van de foutmeldingen. De eenvoudigste manier om te controleren: hou de oude versie bij. Telkens je met een nieuw script wil starten, open de oude en de nieuwe versie in Notepad++ en wissel van tabblad om een visuele check te doen van de verschillen.
