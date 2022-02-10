@@ -4,10 +4,8 @@ GET
   FILE=datamap +  'verwerkt\verzamelbestand.sav'.
 DATASET NAME basis WINDOW=FRONT.
 
-* corrigeer enkele foutjes in de dump.
+* corrigeer enkele oude foutjes in de dump.
 recode nis_code (24302=24104) (22002=23099).
-
-
 
 compute afgeleide_variabelen=$sysmis.
 
@@ -18,7 +16,7 @@ SELECT IF (NIS_CODE > 0).
 EXECUTE.
 
 
-* verwijder foute niscodes.
+* nakijken niscodes.
 recode nis_code
 (12030=12041)
 (12034=12041)
@@ -363,15 +361,17 @@ recode niscode_nieuwegemeenten
 
 frequencies provinciecode.
 
+* TODO: wat doen we uiteindelijk met de dossiers op "vlaams" of "provincieniveau"?.
 
 
 * einde verwijder foute niscodes.
 
+*** begin.
 
-* hieronder de tabellen die ontstaan nadat we de adressen+statsec hebben bezorgd aan VEA.
-* toevoegen statsec.
+* DATASET EERSTE RUN in 2019.
+
 GET DATA  /TYPE=TXT
-  /FILE= datamap + 'statsec\ontvangen_van_veka\resultaten\2019_mapping_aangifte_id_statistische_sector_voor_pic.csv'
+  /FILE=datamap + 'statsec\ontvangen_van_veka\resultaten\2019_mapping_aangifte_id_statistische_sector_voor_pic.csv'
   /ENCODING='UTF8'
   /DELCASE=LINE
   /DELIMITERS="|"
@@ -384,43 +384,44 @@ GET DATA  /TYPE=TXT
   /MAP.
 CACHE.
 EXECUTE.
-DATASET NAME statsec WINDOW=FRONT.
+DATASET NAME statsec0 WINDOW=FRONT.
+sort cases aangifte_id (a).
 
-* enkele dubbels moeten verwijderd worden; check of ze steeds aan dezelfde statsec worden toegekend.
-SORT CASES BY AANGIFTE_ID(A).
+* Identify Duplicate Cases.
+SORT CASES BY AANGIFTE_ID(A) statsec(A).
 MATCH FILES
   /FILE=*
   /BY AANGIFTE_ID
+  /FIRST=PrimaryFirst
   /LAST=PrimaryLast.
+DO IF (PrimaryFirst).
+COMPUTE  MatchSequence=1-PrimaryLast.
+ELSE.
+COMPUTE  MatchSequence=MatchSequence+1.
+END IF.
+LEAVE  MatchSequence.
+FORMATS  MatchSequence (f7).
+COMPUTE  InDupGrp=MatchSequence>0.
+SORT CASES InDupGrp(D).
+MATCH FILES
+  /FILE=*
+  /DROP=PrimaryFirst InDupGrp MatchSequence.
 VARIABLE LABELS  PrimaryLast 'Indicator of each last matching case as Primary'.
 VALUE LABELS  PrimaryLast 0 'Duplicate Case' 1 'Primary Case'.
 VARIABLE LEVEL  PrimaryLast (ORDINAL).
+FREQUENCIES VARIABLES=PrimaryLast.
 EXECUTE.
+
 FILTER OFF.
 USE ALL.
-SELECT IF (PrimaryLast=1).
+SELECT IF (PrimaryLast = 1).
 EXECUTE.
 delete variables PrimaryLast.
-rename variables statsec=statsec_2019.
-
-sort cases AANGIFTE_ID (a).
-
-dataset activate basis.
-sort cases AANGIFTE_ID (a).
-MATCH FILES /FILE=*
-  /TABLE='statsec'
-  /BY AANGIFTE_ID.
-EXECUTE.
-
-dataset close statsec.
 
 
-
-
-* hieronder de tabellen die ontstaan nadat we de adressen+statsec hebben bezorgd aan VEA.
-* toevoegen statsec.
+* DATASET TWEEDE RUN BEGIN 2021.
 GET DATA  /TYPE=TXT
-  /FILE= datamap + 'statsec\ontvangen_van_veka\resultaten\2021_mapping_aangifte_id_statistische_sector_voor_pic.csv'
+  /FILE=datamap + 'statsec\ontvangen_van_veka\resultaten\2021_mapping_aangifte_id_statistische_sector_voor_pic.csv'
   /ENCODING='UTF8'
   /DELCASE=LINE
   /DELIMITERS="|"
@@ -433,44 +434,151 @@ GET DATA  /TYPE=TXT
   /MAP.
 CACHE.
 EXECUTE.
-DATASET NAME statsec WINDOW=FRONT.
+DATASET NAME statsec1 WINDOW=FRONT.
+sort cases aangifte_id (a).
 
-* check op dubbels, die moeten verwijderd worden; check of ze steeds aan dezelfde statsec worden toegekend.
-SORT CASES BY AANGIFTE_ID(A).
+
+* Identify Duplicate Cases.
+SORT CASES BY AANGIFTE_ID(A) statsec(A).
 MATCH FILES
   /FILE=*
   /BY AANGIFTE_ID
+  /FIRST=PrimaryFirst
   /LAST=PrimaryLast.
+DO IF (PrimaryFirst).
+COMPUTE  MatchSequence=1-PrimaryLast.
+ELSE.
+COMPUTE  MatchSequence=MatchSequence+1.
+END IF.
+LEAVE  MatchSequence.
+FORMATS  MatchSequence (f7).
+COMPUTE  InDupGrp=MatchSequence>0.
+SORT CASES InDupGrp(D).
+MATCH FILES
+  /FILE=*
+  /DROP=PrimaryFirst InDupGrp MatchSequence.
 VARIABLE LABELS  PrimaryLast 'Indicator of each last matching case as Primary'.
 VALUE LABELS  PrimaryLast 0 'Duplicate Case' 1 'Primary Case'.
 VARIABLE LEVEL  PrimaryLast (ORDINAL).
+FREQUENCIES VARIABLES=PrimaryLast.
 EXECUTE.
+
 FILTER OFF.
 USE ALL.
-SELECT IF (PrimaryLast=1).
+SELECT IF (PrimaryLast = 1).
 EXECUTE.
 delete variables PrimaryLast.
-rename variables statsec=statsec_2021.
+
+
+
+* DATASET DERDE RUN BEGIN 2022.
+GET DATA  /TYPE=TXT
+  /FILE=datamap + 'statsec\ontvangen_van_veka\resultaten\2022_mapping_aangifte_id_statistische_sector_voor_pic.csv'
+  /ENCODING='UTF8'
+  /DELCASE=LINE
+  /DELIMITERS="|"
+  /ARRANGEMENT=DELIMITED
+  /FIRSTCASE=2
+  /DATATYPEMIN PERCENTAGE=95.0
+  /VARIABLES=
+  AANGIFTE_ID A20
+  statsec A9
+  /MAP.
+CACHE.
+EXECUTE.
+DATASET NAME statsec2 WINDOW=FRONT.
+sort cases aangifte_id (a).
+
+
+* Identify Duplicate Cases.
+SORT CASES BY AANGIFTE_ID(A) statsec(A).
+MATCH FILES
+  /FILE=*
+  /BY AANGIFTE_ID
+  /FIRST=PrimaryFirst
+  /LAST=PrimaryLast.
+DO IF (PrimaryFirst).
+COMPUTE  MatchSequence=1-PrimaryLast.
+ELSE.
+COMPUTE  MatchSequence=MatchSequence+1.
+END IF.
+LEAVE  MatchSequence.
+FORMATS  MatchSequence (f7).
+COMPUTE  InDupGrp=MatchSequence>0.
+SORT CASES InDupGrp(D).
+MATCH FILES
+  /FILE=*
+  /DROP=PrimaryFirst InDupGrp MatchSequence.
+VARIABLE LABELS  PrimaryLast 'Indicator of each last matching case as Primary'.
+VALUE LABELS  PrimaryLast 0 'Duplicate Case' 1 'Primary Case'.
+VARIABLE LEVEL  PrimaryLast (ORDINAL).
+FREQUENCIES VARIABLES=PrimaryLast.
+EXECUTE.
+
+FILTER OFF.
+USE ALL.
+SELECT IF (PrimaryLast = 1).
+EXECUTE.
+delete variables PrimaryLast.
+
+* VOEG HIER EEN NIEUW JAAR TOE WANNEER ER EEN NIEUW BESTAND IS.
+
+
+* voeg hier een file  toe wanneer er eentje bijkomt.
+DATASET ACTIVATE statsec0.
+ADD FILES /FILE=*
+  /FILE='statsec1'
+  /FILE='statsec2'.
+EXECUTE.
+dataset close statsec1.
+dataset close statsec2.
+
+
+* Identify Duplicate Cases.
+SORT CASES BY AANGIFTE_ID(A) statsec(A).
+MATCH FILES
+  /FILE=*
+  /BY AANGIFTE_ID
+  /FIRST=PrimaryFirst
+  /LAST=PrimaryLast.
+DO IF (PrimaryFirst).
+COMPUTE  MatchSequence=1-PrimaryLast.
+ELSE.
+COMPUTE  MatchSequence=MatchSequence+1.
+END IF.
+LEAVE  MatchSequence.
+FORMATS  MatchSequence (f7).
+COMPUTE  InDupGrp=MatchSequence>0.
+SORT CASES InDupGrp(D).
+MATCH FILES
+  /FILE=*
+  /DROP=PrimaryFirst InDupGrp MatchSequence.
+VARIABLE LABELS  PrimaryLast 'Indicator of each last matching case as Primary'.
+VALUE LABELS  PrimaryLast 0 'Duplicate Case' 1 'Primary Case'.
+VARIABLE LEVEL  PrimaryLast (ORDINAL).
+FREQUENCIES VARIABLES=PrimaryLast.
+EXECUTE.
+
+FILTER OFF.
+USE ALL.
+SELECT IF (PrimaryLast = 1).
+EXECUTE.
+delete variables PrimaryLast.
 
 sort cases AANGIFTE_ID (a).
+
 
 dataset activate basis.
 sort cases AANGIFTE_ID (a).
 MATCH FILES /FILE=*
-  /TABLE='statsec'
+  /TABLE='statsec0'
   /BY AANGIFTE_ID.
 EXECUTE.
 
-dataset close statsec.
+dataset close statsec0.
 
-* check of er dossiers zijn met meer dan een statsec code.
-* er van uit gaande van niet, voeg samen.
-string statsec (a9).
-compute statsec=concat(ltrim(rtrim(statsec_2019)),ltrim(rtrim(statsec_2021))).
-EXECUTE.
-delete variables statsec_2019 statsec_2021.
 
-* we zetten alles volgens de logica van de nieuwe statsec.
+* we zetten alles volgens de logica van de statsec 2020.
 recode statsec
 ('11002J81-'='11002J8AN')
 ('11002K174'='11002K1NP')
@@ -488,12 +596,16 @@ recode statsec
 
 * nakijken statsec en niscode.
 
-* lege statsec geven geen meerwaarde en kunnen nog gebied onbekend van gemeente2018 bevatten.
+* huidige statsec kan nog gebied onbekend van gemeente2018 bevatten, even leegmaken om ze direct weer mee te pakken.
 if char.index(statsec,"ZZZZ")=6 statsec="".
 EXECUTE.
 
+* als er geen statsec is maar wel een niscode, ken toe aan gebied onbekend van de juiste gemeente.
 if statsec="" & provinciecode>0 statsec=concat(string(niscode_nieuwegemeenten,f5.0),"ZZZZ").
+* als er dan nog geen statsec is, ken toe aan "Vlaanderen gemeente onbekend".
 if statsec="" statsec="99991ZZZZ".
+
+* controleren of de dossiers geprikt zijn in een statsec van waar het dossier ligt.
 compute statsec_nis=number(char.substr(statsec,1,5),f5.0).
 alter type statsec_nis (f5.0).
 recode statsec_nis (12030=12041)
@@ -514,12 +626,13 @@ recode statsec_nis (12030=12041)
 
 * er zijn slechts enkele dossiers toegekend aan een statsec buiten de gemeente.
 * net als de gevallen die niet gevonden werden, mogen deze in het onbekend gebied van de gemeente terecht komen.
-if niscode_nieuwegemeenten ~= statsec_nis error=1.
-EXECUTE.
+if niscode_nieuwegemeenten ~= statsec_nis & provinciecode> 0 error=1.
+frequencies error.
 
 if provinciecode>0 & niscode_nieuwegemeenten ~= statsec_nis statsec=concat(string(nis_code,f5.0),"ZZZZ").
 EXECUTE.
 
+delete variables error.
 
 
 ***** omdat de datum verknald was in 2018 ****.
@@ -536,20 +649,20 @@ compute aanvraag_jaar=number(char.substr(AANVRAAG_DATUM,1,4),f4.0).
 compute indien_jaar=number(char.substr(INGEDIEND_DATUM,1,4),f4.0).
 EXECUTE.
 
-freq aanvraag_jaar indien_jaar.
+frequencies aanvraag_jaar indien_jaar.
 
 
 
 
 
-freq aard_werken.
+frequencies aard_werken.
 recode aard_werken ("Nieuwbouw"=1) (else=0) into nieuwbouw.
 value labels nieuwbouw
 0 "renovatie/wijziging"
 1 "nieuwbouw".
-freq nieuwbouw.
+frequencies nieuwbouw.
 
-freq bestemming.
+frequencies bestemming.
 recode bestemming ('ANDERE'=8)
 ('ANDERE MET KANTOOR'=8)
 ('GD NIET RESIDENTIEEL'=8)
@@ -575,7 +688,7 @@ value labels bestemming_cat
 7 'landbouw'
 8 'andere niet residentieel'
 9 'onbekend (ongewijzigd)'.
-freq bestemming_cat.
+frequencies bestemming_cat.
 
 * enkel voor residentieel en kantoor+residentieel classificeren we de bouwvorm.
 do if bestemming_cat=1 | bestemming_cat=2.
@@ -588,7 +701,7 @@ value labels type_woning
 1 'Gesloten bebouwing'
 2 'Halfopen bebouwing'
 3 'Vrijstaand'.
-freq type_woning.
+frequencies type_woning.
 
 compute type_bebouwing=0.
 variable labels type_bebouwing 'soort woning'.
@@ -603,7 +716,7 @@ if CHAR.INDEX(types_functie_last,"APPARTEMENT")> 0 | CHAR.INDEX(types_functie_la
 CHAR.INDEX(types_functie_last,"COLLECTIVE_HOUSING")> 0 | CHAR.INDEX(types_functie_last,"LOFT")> 0 type_bebouwing=1.
 * we nemen type woning over, maar schuiven het een omhoog.
 if any(type_woning,1,2,3)=1 type_bebouwing=type_woning+1.
-freq type_bebouwing.
+frequencies type_bebouwing.
 
 
 
@@ -648,11 +761,12 @@ NEB_VOOR_VERW_EENH_OPP.
 
 * INDICATOREN SWING.
 * enkel vanaf 2010 meenemen.
+frequencies indien_jaar.
 FILTER OFF.
 USE ALL.
 SELECT IF (indien_jaar >2009 & indien_jaar <= number(datajaar,f4.0)).
 EXECUTE.
-
+frequencies indien_jaar.
 * enkel residentiele nieuwbouw for now.
 
 FILTER OFF.
@@ -776,12 +890,69 @@ ADD FILES /FILE=*
   /FILE='kopie'.
 EXECUTE.
 dataset activate kopie.
+dataset activate kopie.
 compute indien_jaar=indien_jaar+1.
 dataset activate verrijken.
 ADD FILES /FILE=*
   /FILE='kopie'.
 EXECUTE.
+dataset activate kopie.
+compute indien_jaar=indien_jaar+1.
+dataset activate verrijken.
+ADD FILES /FILE=*
+  /FILE='kopie'.
+EXECUTE.
+dataset activate kopie.
+compute indien_jaar=indien_jaar+1.
+dataset activate verrijken.
+ADD FILES /FILE=*
+  /FILE='kopie'.
+EXECUTE.
+dataset activate kopie.
+compute indien_jaar=indien_jaar+1.
+dataset activate verrijken.
+ADD FILES /FILE=*
+  /FILE='kopie'.
+EXECUTE.
+dataset activate kopie.
+compute indien_jaar=indien_jaar+1.
+dataset activate verrijken.
+ADD FILES /FILE=*
+  /FILE='kopie'.
+EXECUTE.
+dataset activate kopie.
+compute indien_jaar=indien_jaar+1.
+dataset activate verrijken.
+ADD FILES /FILE=*
+  /FILE='kopie'.
+EXECUTE.
+dataset activate kopie.
+compute indien_jaar=indien_jaar+1.
+dataset activate verrijken.
+ADD FILES /FILE=*
+  /FILE='kopie'.
+EXECUTE.
+dataset activate kopie.
+compute indien_jaar=indien_jaar+1.
+dataset activate verrijken.
+ADD FILES /FILE=*
+  /FILE='kopie'.
+EXECUTE.
+dataset activate kopie.
+compute indien_jaar=indien_jaar+1.
+dataset activate verrijken.
+ADD FILES /FILE=*
+  /FILE='kopie'.
+EXECUTE.
+
+dataset activate verrijken.
+frequencies indien_jaar.
 dataset close kopie.
+FILTER OFF.
+USE ALL.
+SELECT IF (indien_jaar <= number(datajaar,f4.0)).
+EXECUTE.
+frequencies indien_jaar.
 
 sort cases statsec (a) indien_jaar (a).
 
@@ -792,6 +963,8 @@ MATCH FILES /FILE=*
   /TABLE='verrijken'
   /BY  statsec indien_jaar.
 EXECUTE.
+
+
 
 * vervolgens voegen we de hele file onderaan toe. op die manier ontstaan er missings die we op nul kunnen zetten voor elke statsec waar géén dossiers zijn.
 ADD FILES /FILE=*
