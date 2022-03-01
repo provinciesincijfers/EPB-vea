@@ -767,11 +767,13 @@ USE ALL.
 SELECT IF (indien_jaar >2009 & indien_jaar <= number(datajaar,f4.0)).
 EXECUTE.
 frequencies indien_jaar.
-* enkel residentiele nieuwbouw for now.
 
+
+
+* enkel residentiele nieuwbouw. Toevoeging in 02/2022: verwijder ook nieuwe vakantiehuisjes.
 FILTER OFF.
 USE ALL.
-SELECT IF (nieuwbouw = 1 & bestemming_cat = 1).
+SELECT IF (nieuwbouw = 1 & bestemming_cat = 1 & types_functie_last~="VACATION_HOUSE").
 EXECUTE.
 
 
@@ -1693,6 +1695,41 @@ AGGREGATE
 DATASET ACTIVATE mediaan1.
 string geolevel (a25).
 compute geolevel='vervoerregio'.
+DATASET ACTIVATE mediaan.
+ADD FILES /FILE=*
+  /FILE='mediaan1'.
+EXECUTE.
+dataset activate basis.
+delete variables geoitem.
+
+
+rename variables TREG=geoitem.
+alter type geoitem (a15).
+DATASET DECLARE mediaan1.
+AGGREGATE
+  /OUTFILE='mediaan1'
+  /BREAK=period geoitem
+  /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
+DATASET ACTIVATE mediaan1.
+string geolevel (a25).
+compute geolevel='treg'.
+DATASET ACTIVATE mediaan.
+ADD FILES /FILE=*
+  /FILE='mediaan1'.
+EXECUTE.
+dataset activate basis.
+delete variables geoitem.
+
+rename variables refreg=geoitem.
+alter type geoitem (a15).
+DATASET DECLARE mediaan1.
+AGGREGATE
+  /OUTFILE='mediaan1'
+  /BREAK=period geoitem
+  /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
+DATASET ACTIVATE mediaan1.
+string geolevel (a25).
+compute geolevel='refreg'.
 DATASET ACTIVATE mediaan.
 ADD FILES /FILE=*
   /FILE='mediaan1'.
