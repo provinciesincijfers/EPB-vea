@@ -1496,8 +1496,6 @@ SAVE TRANSLATE OUTFILE=datamap +  'upload\detail_statsec.xlsx'
 * verzamel de mediaan data.
 * start.
 dataset activate basis.
-delete variables geoitem.
-rename variables ggw7=geoitem.
 alter type geoitem (a15).
 DATASET DECLARE mediaan.
 AGGREGATE
@@ -1506,11 +1504,29 @@ AGGREGATE
   /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
 DATASET ACTIVATE mediaan.
 string geolevel (a25).
-compute geolevel='ggw7'.
+compute geolevel='statsec'.
 dataset activate basis.
 delete variables geoitem.
 
 * voeg toe.
+rename variables ggw7=geoitem.
+alter type geoitem (a15).
+DATASET DECLARE mediaan1.
+AGGREGATE
+  /OUTFILE='mediaan1'
+  /BREAK=period geoitem
+  /v2207_nbw_peil_mediaan=MEDIAN(E_PEIL).
+DATASET ACTIVATE mediaan1.
+string geolevel (a25).
+compute geolevel='ggw7'.
+DATASET ACTIVATE mediaan.
+ADD FILES /FILE=*
+  /FILE='mediaan1'.
+EXECUTE.
+dataset activate basis.
+delete variables geoitem.
+
+
 rename variables deelgemeente=geoitem.
 alter type geoitem (a15).
 DATASET DECLARE mediaan1.
