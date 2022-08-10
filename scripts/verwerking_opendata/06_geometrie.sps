@@ -47,7 +47,7 @@ AGGREGATE
   /BREAK=AANGIFTE_ID BRUTO_VLOER_OPPERVLAKTE
   /N_BREAK=N.
 dataset activate d06a.
-
+* in de praktijk is er altijd slechts één oppervlakte per aangifte.
 
 
 DATASET ACTIVATE d06a.

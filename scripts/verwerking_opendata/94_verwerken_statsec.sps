@@ -1124,12 +1124,16 @@ if  primair_energie_cat = 3 v2207_nbw_primair_70p = 1.
 if  primair_energie_cat = 9 v2207_nbw_primair_onb = 1.
 
 *  klasse-indeling E_peil kleiner-50-60-70-80-groter.
-if e_peil>-0.01 & e_peil<50 v2207_nbw_ep_0_50=1.
+* e-peil kan kleiner dan nul zijn.
+if e_peil<50 v2207_nbw_ep_0_50=1.
 if e_peil>50 & e_peil<=60 v2207_nbw_ep_50_60=1.
 if e_peil>60 & e_peil<=70 v2207_nbw_ep_60_70=1.
 if e_peil>70 & e_peil<=80 v2207_nbw_ep_70_80=1.
 if e_peil>80  v2207_nbw_ep_80p=1.
-if e_peil<0 | missing(e_peil) v2207_nbw_ep_onb=1.
+if missing(e_peil) & v2207_epb_dossier=1 v2207_nbw_ep_onb=1.
+
+* nieuwe vragen 2022: aantal dossiers met maximaal EPB 100.
+if e_peil<=100 v2207_nbw_ep_100=1.
 
 * voldoen.
 compute v2207_nbw_vold_ventilatie=INDICATOR_VOLDOEN_VENTILATIE.
@@ -1169,6 +1173,14 @@ if type_bebouwing=1 & INDICATOR_WARMTEPOMP_max=1 v2207_nbw_wp_app=1.
 if type_bebouwing=2 & INDICATOR_WARMTEPOMP_max=1  v2207_nbw_wp_gesl=1.
 if type_bebouwing=3 & INDICATOR_WARMTEPOMP_max=1  v2207_nbw_wp_hopen=1.
 if type_bebouwing=4 & INDICATOR_WARMTEPOMP_max=1  v2207_nbw_wp_open=1.
+* nieuw toegevoegd in 2022: type en spf van warmtepompen.
+if INDICATOR_WARMTEPOMP_max=1  v2207_nbw_wp_tot=1.
+if lucht_water=1 v2207_nbw_wp_lucht_water=1.
+if bodem_water=1 v2207_nbw_wp_bodem_water=1.
+if lucht_lucht=1 v2207_nbw_wp_lucht_lucht=1.
+if water_water=1 v2207_nbw_wp_water_water=1.
+if type_warmtepomp_bekend=1 v2207_nbw_wp_type_bekend=1.
+if WARMTEPOMP_SPF_max>0 v2207_nbw_wp_spf_bekend=1.
 
 * heeft zonnecollector.
 compute v2207_nbw_zoncol=thermische_zonne_energie.
@@ -1177,6 +1189,9 @@ if type_bebouwing=1 v2207_nbw_zoncol_app=thermische_zonne_energie.
 if type_bebouwing=2 v2207_nbw_zoncol_gesl=thermische_zonne_energie.
 if type_bebouwing=3 v2207_nbw_zoncol_hopen=thermische_zonne_energie.
 if type_bebouwing=4 v2207_nbw_zoncol_open=thermische_zonne_energie.
+* nieuwe vraag 2022: productie van zonnecollectoren.
+compute v2207_nbw_zoncol_opp=zonnecollector_opp.
+compute v2207_nbw_zoncol_prod=prod_zonnecollector.
 
 * heeft zonnepanelen.
 compute v2207_nbw_pv=pv_panelen.
@@ -1187,13 +1202,15 @@ if type_bebouwing=3 v2207_nbw_pv_hopen=pv_panelen.
 if type_bebouwing=4 v2207_nbw_pv_open=pv_panelen.
 
 * ventilatiesysteem.
-if VENTILATIE_SYSTEEM_d10='natuurlijke toevoer, natuurlijke afvoer (A)' v2207_nbw_vent_a=1.
-if VENTILATIE_SYSTEEM_d10='mechanische toevoer, vrije afvoer (B)' v2207_nbw_vent_b=1.
-if VENTILATIE_SYSTEEM_d10='vrije toevoer, mechanische afvoer (C)' v2207_nbw_vent_c=1.
-if VENTILATIE_SYSTEEM_d10='mechanische toevoer, mechanische afvoer (D)' v2207_nbw_vent_d=1.
-if VENTILATIE_SYSTEEM_d10='onbe' v2207_nbw_vent_onb=1.
-if VENTILATIE_SYSTEEM_d10='geen' v2207_nbw_vent_onb=1.
+* aangepast in 2022: niet meer "wat toevallig eerste is", maar "het meest geavanceerde systeem.
+if VENTILATIE_SYSTEEM_num=0 v2207_nbw_vent_onb=1.
+if VENTILATIE_SYSTEEM_num=1 v2207_nbw_vent_a=1.
+if VENTILATIE_SYSTEEM_num=2 v2207_nbw_vent_b=1.
+if VENTILATIE_SYSTEEM_num=3 v2207_nbw_vent_c=1.
+if VENTILATIE_SYSTEEM_num=4 v2207_nbw_vent_d=1.
 
+* nieuwe vraag 2022: koeling.
+if koeling=1 v2207_nbw_koeling=1.
 
 
 DATASET DECLARE basicgem.
@@ -1253,7 +1270,19 @@ AGGREGATE
 /v2207_nbw_opp_app=sum(v2207_nbw_opp_app)
 /v2207_nbw_opp_gesl=sum(v2207_nbw_opp_gesl)
 /v2207_nbw_opp_hopen=sum(v2207_nbw_opp_hopen)
-/v2207_nbw_opp_open=sum(v2207_nbw_opp_open).
+/v2207_nbw_opp_open=sum(v2207_nbw_opp_open)
+/v2207_nbw_ep_100=sum(v2207_nbw_ep_100)
+/v2207_nbw_zoncol_opp=sum(v2207_nbw_zoncol_opp)
+/v2207_nbw_zoncol_prod=sum(v2207_nbw_zoncol_prod)
+/v2207_nbw_wp_tot=sum(v2207_nbw_wp_tot)
+ /v2207_nbw_wp_lucht_water=sum(v2207_nbw_wp_lucht_water)
+ /v2207_nbw_wp_bodem_water=sum(v2207_nbw_wp_bodem_water)
+ /v2207_nbw_wp_lucht_lucht=sum(v2207_nbw_wp_lucht_lucht)
+ /v2207_nbw_wp_water_water=sum(v2207_nbw_wp_water_water)
+ /v2207_nbw_wp_type_bekend=sum(v2207_nbw_wp_type_bekend)
+ /v2207_nbw_wp_spf_bekend=sum(v2207_nbw_wp_spf_bekend)
+ /v2207_nbw_wp_spf_som=sum(WARMTEPOMP_SPF_max)
+ /v2207_nbw_koeling=sum(v2207_nbw_koeling).
 DATASET ACTIVATE basicgem.
 string geolevel (a25).
 compute geolevel='statsec'.
@@ -1263,6 +1292,12 @@ if brussel=1 v2207_nbw_dossier=-99999.
 if char.substr(geoitem,6,4)="ZZZZ" & missing(v2207_nbw_dossier) v2207_nbw_dossier=-99996.
 if missing(v2207_nbw_dossier) v2207_nbw_dossier=0.
 
+* omzetten v2207_nbw_ep_100 naar een cummulatief gegeven.
+sort cases geoitem (a) period (a).
+if $casenum=1 | geoitem~=lag(geoitem) v2207_nbw_ep_100_cum=max(v2207_nbw_ep_100,0).
+if geoitem=lag(geoitem) v2207_nbw_ep_100_cum=lag(v2207_nbw_ep_100_cum) + max(v2207_nbw_ep_100,0).
+EXECUTE.
+sort cases period (a) geoitem (a).
 
 do if brussel=1.
 recode v2207_nbw_primair_0_15
@@ -1316,6 +1351,19 @@ v2207_nbw_opp_app
 v2207_nbw_opp_gesl
 v2207_nbw_opp_hopen
 v2207_nbw_opp_open
+v2207_nbw_ep_100
+v2207_nbw_ep_100_cum
+v2207_nbw_zoncol_opp
+v2207_nbw_zoncol_prod
+v2207_nbw_wp_tot
+v2207_nbw_wp_lucht_water
+v2207_nbw_wp_bodem_water
+v2207_nbw_wp_lucht_lucht
+v2207_nbw_wp_water_water
+v2207_nbw_wp_type_bekend
+v2207_nbw_wp_spf_bekend
+v2207_nbw_wp_spf_som
+v2207_nbw_koeling
  (missing=-99999).
 end if.
 
@@ -1371,6 +1419,19 @@ v2207_nbw_opp_app
 v2207_nbw_opp_gesl
 v2207_nbw_opp_hopen
 v2207_nbw_opp_open
+v2207_nbw_ep_100
+v2207_nbw_ep_100_cum
+v2207_nbw_zoncol_opp
+v2207_nbw_zoncol_prod
+v2207_nbw_wp_tot
+v2207_nbw_wp_lucht_water
+v2207_nbw_wp_bodem_water
+v2207_nbw_wp_lucht_lucht
+v2207_nbw_wp_water_water
+v2207_nbw_wp_type_bekend
+v2207_nbw_wp_spf_bekend
+v2207_nbw_wp_spf_som
+v2207_nbw_koeling
  (missing=0).
 end if.
 
@@ -1426,6 +1487,19 @@ v2207_nbw_opp_app
 v2207_nbw_opp_gesl
 v2207_nbw_opp_hopen
 v2207_nbw_opp_open
+v2207_nbw_ep_100
+v2207_nbw_ep_100_cum
+v2207_nbw_zoncol_opp
+v2207_nbw_zoncol_prod
+v2207_nbw_wp_tot
+v2207_nbw_wp_lucht_water
+v2207_nbw_wp_bodem_water
+v2207_nbw_wp_lucht_lucht
+v2207_nbw_wp_water_water
+v2207_nbw_wp_type_bekend
+v2207_nbw_wp_spf_bekend
+v2207_nbw_wp_spf_som
+v2207_nbw_koeling
  (missing=-99996).
 end if.
 
@@ -1476,13 +1550,34 @@ v2207_nbw_vent_a
 v2207_nbw_vent_b
 v2207_nbw_vent_c
 v2207_nbw_vent_d
-v2207_nbw_vent_onb v2207_nbw_opp_ander
+v2207_nbw_vent_onb 
+v2207_nbw_opp_ander
 v2207_nbw_opp_app
 v2207_nbw_opp_gesl
 v2207_nbw_opp_hopen
-v2207_nbw_opp_open (f8.0).
+v2207_nbw_opp_open
+v2207_nbw_ep_100
+v2207_nbw_ep_100_cum
+v2207_nbw_wp_tot
+v2207_nbw_wp_lucht_water
+v2207_nbw_wp_bodem_water
+v2207_nbw_wp_lucht_lucht
+v2207_nbw_wp_water_water
+v2207_nbw_wp_type_bekend
+v2207_nbw_wp_spf_bekend
+v2207_nbw_koeling
+(f8.0).
 
 DELETE VARIABLES brussel.
+
+
+* verwijderen warmtepomp details die slecht ingevuld zijn tem 2016.
+do if period <2017.
+recode v2207_nbw_wp_lucht_water
+v2207_nbw_wp_bodem_water
+v2207_nbw_wp_lucht_lucht
+v2207_nbw_wp_water_water (-1 thru highest=-99996).
+end if.
 
 SAVE TRANSLATE OUTFILE=datamap +  'upload\detail_statsec.xlsx'
   /TYPE=XLS
@@ -1491,6 +1586,16 @@ SAVE TRANSLATE OUTFILE=datamap +  'upload\detail_statsec.xlsx'
   /FIELDNAMES VALUE=NAMES
   /CELLS=VALUES
 /replace.
+
+
+SAVE TRANSLATE OUTFILE=datamap +  'upload\detail_statsec.csv'
+  /TYPE=CSV
+  /ENCODING='Locale'
+  /MAP
+  /REPLACE
+  /FIELDNAMES
+  /CELLS=VALUES.
+
 
 
 * verzamel de mediaan data.
@@ -1777,3 +1882,4 @@ SAVE TRANSLATE OUTFILE=datamap +  'upload\niet_aggregeerbaar.xlsx'
   /FIELDNAMES VALUE=NAMES
   /CELLS=VALUES
 /replace.
+

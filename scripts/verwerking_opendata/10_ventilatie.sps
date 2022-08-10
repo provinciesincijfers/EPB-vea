@@ -36,14 +36,38 @@ alter type m_factor (f8.2).
 compute REDUCTIE_FACTOR_VRAAGSTURING=replace(REDUCTIE_FACTOR_VRAAGSTURING,".",",").
 alter type REDUCTIE_FACTOR_VRAAGSTURING (f8.3).
 
+recode TYPE_KOELING
+('actieve koeling'=1)
+('centrale koeling'=1)
+('geen actieve koeling'=0)
+('plaatselijke koeling'=1) into koeling.
 
+recode VENTILATIE_SYSTEEM
+('geen'=0)
+('natuurlijke toevoer, natuurlijke afvoer (A)'=1)
+('mechanische toevoer, vrije afvoer (B)'=2)
+('vrije toevoer, mechanische afvoer (C)'=3)
+('mechanische toevoer, mechanische afvoer (D)'=4) into VENTILATIE_SYSTEEM_num.
+value labels VENTILATIE_SYSTEEM_num
+0 'geen'
+1 'natuurlijke toevoer, natuurlijke afvoer (A)'
+2 'mechanische toevoer, vrije afvoer (B)'
+3 'vrije toevoer, mechanische afvoer (C)'
+4 'mechanische toevoer, mechanische afvoer (D)'.
+
+
+
+* er zijn aangiftes met gedeeltelijk wel, gedeeltelijk geen koeling. Er is echter geen opp per zone beschikbaar om een inschatting van het belang van de uimtes te maken. 
+* De overgrote meerderheid van aangiftes mét koeling hebben overal koeling. Dus beschouwen we hier als -met koeling- alles wat iets van koeling heeft.
+* zelfde issues met de ventilaitiesystemen. Hier nemen we met "meest geavanceerde" systeem als basis.
 DATASET ACTIVATE d10.
 DATASET DECLARE plat10.
 AGGREGATE
   /OUTFILE='plat10'
   /BREAK=AANGIFTE_ID
-  /VENTILATIE_SYSTEEM_d10=FIRST(VENTILATIE_SYSTEEM)
-  /AANWEZIGHEID_WTW=max(AANWEZIGHEID_WTW).
+  /VENTILATIE_SYSTEEM_num=MAX(VENTILATIE_SYSTEEM_num)
+  /AANWEZIGHEID_WTW=max(AANWEZIGHEID_WTW)
+  /koeling=max(koeling).
 dataset activate plat10.
 
 

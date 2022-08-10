@@ -69,6 +69,24 @@ alter type WARMTEPOMP_COP (f8.2).
 alter type VERMOGEN (f8.2).
 alter type OPWEKKINGSRENDEMENT (f8.2).
 
+if type_warmtepomp='Enkel buitenlucht-Water' lucht_water=1.
+if type_warmtepomp='Bodem-Water' bodem_water=1.
+if type_warmtepomp='Enkel buitenlucht-Binnenlucht' lucht_lucht=1.
+if type_warmtepomp='Grondwater-Water' water_water=1.
+if type_warmtepomp='Afgevoerde lucht vermengd met buitenlucht-Water' lucht_lucht=1.
+if type_warmtepomp='Waterlus-Water' water_water=1.
+if type_warmtepomp='Enkel buitenlucht-Ruimtelucht' lucht_lucht=1.
+if type_warmtepomp='Enkel afgevoerde ventilatielucht-Water' lucht_water=1.
+if type_warmtepomp='Oppervlaktewater-Water' water_water=1.
+if type_warmtepomp='Enkel afgevoerde ventilatielucht-Toegevoerde ventilatielucht volledig bestaand uit buitenlucht' lucht_lucht=1.
+if type_warmtepomp='Enkel buitenlucht-Toegevoerde ventilatielucht volledig bestaand uit buitenlucht' lucht_lucht=1.
+if type_warmtepomp='Enkel buitenlucht-Toegevoerde ventilatielucht volledig bestaand uit buitenlucht' lucht_lucht=1.
+compute type_warmtepomp_bekend=max(lucht_water,bodem_water,lucht_lucht,water_water).
+
+* als opwekkingsrendement en warmtepomp_spf zijn ingevuld, zijn beide identiek. Opgelet: enkel doordrukken als het effectief om het vermogen van een warmtepomp gaat!.
+if missing(warmtepomp_spf) & INDICATOR_WARMTEPOMP=1 warmtepomp_spf=opwekkingsrendement..
+
+
 * opgelet: dit maakt abstractie van energie sector en ventilatie zone.
 DATASET ACTIVATE d07.
 DATASET DECLARE plat07.
@@ -79,6 +97,11 @@ AGGREGATE
   /TYPE_VERWARMING_last=LAST(TYPE_VERWARMING) 
   /INDICATOR_WARMTEPOMP_max=MAX(INDICATOR_WARMTEPOMP) 
   /WARMTEPOMP_SPF_max=MAX(WARMTEPOMP_SPF)
+ /lucht_water=max(lucht_water)
+ /bodem_water=max(bodem_water)
+ /lucht_lucht=max(lucht_lucht)
+ /water_water=max(water_water)
+ /type_warmtepomp_bekend=max(type_warmtepomp_bekend)
   /aantal_records_07=N.
 DATASET ACTIVATE plat07.
 
@@ -94,6 +117,11 @@ TYPE_VERWARMING_first
 TYPE_VERWARMING_last
 INDICATOR_WARMTEPOMP_max
 WARMTEPOMP_SPF_max
+lucht_water
+bodem_water
+lucht_lucht
+water_water
+type_warmtepomp_bekend
 aantal_records_07
 einde_07.
 
