@@ -73,7 +73,7 @@ if type_warmtepomp='Enkel buitenlucht-Water' lucht_water=1.
 if type_warmtepomp='Bodem-Water' bodem_water=1.
 if type_warmtepomp='Enkel buitenlucht-Binnenlucht' lucht_lucht=1.
 if type_warmtepomp='Grondwater-Water' water_water=1.
-if type_warmtepomp='Afgevoerde lucht vermengd met buitenlucht-Water' lucht_lucht=1.
+if type_warmtepomp='Afgevoerde lucht vermengd met buitenlucht-Water' lucht_water=1.
 if type_warmtepomp='Waterlus-Water' water_water=1.
 if type_warmtepomp='Enkel buitenlucht-Ruimtelucht' lucht_lucht=1.
 if type_warmtepomp='Enkel afgevoerde ventilatielucht-Water' lucht_water=1.
