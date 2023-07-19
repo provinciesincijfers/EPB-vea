@@ -361,7 +361,7 @@ recode niscode_nieuwegemeenten
 
 frequencies provinciecode.
 
-* TODO: wat doen we uiteindelijk met de dossiers op "vlaams" of "provincieniveau"?.
+* Dossiers op "vlaams" of "provincieniveau" hebben uiteindelijk geen statsec en geen gemeentecode, en komen daarom terecht bij gebied onbekend Vlaanderen (rond regel 660).
 
 
 * einde verwijder foute niscodes.
@@ -521,6 +521,60 @@ SELECT IF (PrimaryLast = 1).
 EXECUTE.
 delete variables PrimaryLast.
 
+
+
+* DATASET VIERDE RUN BEGIN 2023.
+GET DATA  /TYPE=TXT
+  /FILE=datamap + 'statsec\ontvangen_van_veka\resultaten\2023_mapping_aangifte_id_statistische_sector_voor_pic.csv'
+  /ENCODING='UTF8'
+  /DELCASE=LINE
+  /DELIMITERS="|"
+  /ARRANGEMENT=DELIMITED
+  /FIRSTCASE=2
+  /DATATYPEMIN PERCENTAGE=95.0
+  /VARIABLES=
+  AANGIFTE_ID A20
+  statsec A9
+  /MAP.
+CACHE.
+EXECUTE.
+DATASET NAME statsec3 WINDOW=FRONT.
+sort cases aangifte_id (a).
+
+
+* Identify Duplicate Cases.
+SORT CASES BY AANGIFTE_ID(A) statsec(A).
+MATCH FILES
+  /FILE=*
+  /BY AANGIFTE_ID
+  /FIRST=PrimaryFirst
+  /LAST=PrimaryLast.
+DO IF (PrimaryFirst).
+COMPUTE  MatchSequence=1-PrimaryLast.
+ELSE.
+COMPUTE  MatchSequence=MatchSequence+1.
+END IF.
+LEAVE  MatchSequence.
+FORMATS  MatchSequence (f7).
+COMPUTE  InDupGrp=MatchSequence>0.
+SORT CASES InDupGrp(D).
+MATCH FILES
+  /FILE=*
+  /DROP=PrimaryFirst InDupGrp MatchSequence.
+VARIABLE LABELS  PrimaryLast 'Indicator of each last matching case as Primary'.
+VALUE LABELS  PrimaryLast 0 'Duplicate Case' 1 'Primary Case'.
+VARIABLE LEVEL  PrimaryLast (ORDINAL).
+FREQUENCIES VARIABLES=PrimaryLast.
+EXECUTE.
+
+FILTER OFF.
+USE ALL.
+SELECT IF (PrimaryLast = 1).
+EXECUTE.
+delete variables PrimaryLast.
+
+
+
 * VOEG HIER EEN NIEUW JAAR TOE WANNEER ER EEN NIEUW BESTAND IS.
 
 
@@ -528,11 +582,12 @@ delete variables PrimaryLast.
 DATASET ACTIVATE statsec0.
 ADD FILES /FILE=*
   /FILE='statsec1'
-  /FILE='statsec2'.
+  /FILE='statsec2'
+  /FILE='statsec3'.
 EXECUTE.
 dataset close statsec1.
 dataset close statsec2.
-
+dataset close statsec3.
 
 * Identify Duplicate Cases.
 SORT CASES BY AANGIFTE_ID(A) statsec(A).
@@ -1123,9 +1178,12 @@ if  primair_energie_cat = 2 v2207_nbw_primair_15_70 = 1.
 if  primair_energie_cat = 3 v2207_nbw_primair_70p = 1.
 if  primair_energie_cat = 9 v2207_nbw_primair_onb = 1.
 
+
 *  klasse-indeling E_peil kleiner-50-60-70-80-groter.
-* e-peil kan kleiner dan nul zijn.
-if e_peil<50 v2207_nbw_ep_0_50=1.
+* opmerking: e-peil kan kleiner dan nul zijn.
+if e_peil<=30 v2207_nbw_ep_30=1.
+if e_peil>30 & e_peil<=50 v2207_nbw_ep_30_50=1.
+if e_peil<=50 v2207_nbw_ep_0_50=1.
 if e_peil>50 & e_peil<=60 v2207_nbw_ep_50_60=1.
 if e_peil>60 & e_peil<=70 v2207_nbw_ep_60_70=1.
 if e_peil>70 & e_peil<=80 v2207_nbw_ep_70_80=1.
@@ -1182,6 +1240,8 @@ if water_water=1 v2207_nbw_wp_water_water=1.
 if type_warmtepomp_bekend=1 v2207_nbw_wp_type_bekend=1.
 if WARMTEPOMP_SPF_max>0 v2207_nbw_wp_spf_bekend=1.
 
+
+
 * heeft zonnecollector.
 compute v2207_nbw_zoncol=thermische_zonne_energie.
 if type_bebouwing=0 v2207_nbw_zoncol_ander=thermische_zonne_energie.
@@ -1228,6 +1288,9 @@ AGGREGATE
 /v2207_nbw_ep_60_70=sum(v2207_nbw_ep_60_70)
 /v2207_nbw_ep_70_80=sum(v2207_nbw_ep_70_80)
 /v2207_nbw_ep_80p=sum(v2207_nbw_ep_80p)
+/v2207_nbw_ep_30=sum(v2207_nbw_ep_30)
+/v2207_nbw_ep_30_50=sum(v2207_nbw_ep_30_50)
+/v2207_nbw_ep_100=sum(v2207_nbw_ep_100)
 /v2207_nbw_ep_onb=sum(v2207_nbw_ep_onb)
 /v2207_nbw_vold_ventilatie=sum(v2207_nbw_vold_ventilatie)
 /v2207_nbw_vold_verhit=sum(v2207_nbw_vold_verhit)
@@ -1271,7 +1334,6 @@ AGGREGATE
 /v2207_nbw_opp_gesl=sum(v2207_nbw_opp_gesl)
 /v2207_nbw_opp_hopen=sum(v2207_nbw_opp_hopen)
 /v2207_nbw_opp_open=sum(v2207_nbw_opp_open)
-/v2207_nbw_ep_100=sum(v2207_nbw_ep_100)
 /v2207_nbw_zoncol_opp=sum(v2207_nbw_zoncol_opp)
 /v2207_nbw_zoncol_prod=sum(v2207_nbw_zoncol_prod)
 /v2207_nbw_wp_tot=sum(v2207_nbw_wp_tot)
@@ -1364,6 +1426,8 @@ v2207_nbw_wp_type_bekend
 v2207_nbw_wp_spf_bekend
 v2207_nbw_wp_spf_som
 v2207_nbw_koeling
+v2207_nbw_ep_30
+v2207_nbw_ep_30_50
  (missing=-99999).
 end if.
 
@@ -1432,6 +1496,8 @@ v2207_nbw_wp_type_bekend
 v2207_nbw_wp_spf_bekend
 v2207_nbw_wp_spf_som
 v2207_nbw_koeling
+v2207_nbw_ep_30
+v2207_nbw_ep_30_50
  (missing=0).
 end if.
 
@@ -1500,6 +1566,8 @@ v2207_nbw_wp_type_bekend
 v2207_nbw_wp_spf_bekend
 v2207_nbw_wp_spf_som
 v2207_nbw_koeling
+v2207_nbw_ep_30
+v2207_nbw_ep_30_50
  (missing=-99996).
 end if.
 
@@ -1566,6 +1634,8 @@ v2207_nbw_wp_water_water
 v2207_nbw_wp_type_bekend
 v2207_nbw_wp_spf_bekend
 v2207_nbw_koeling
+v2207_nbw_ep_30
+v2207_nbw_ep_30_50
 (f8.0).
 
 DELETE VARIABLES brussel.

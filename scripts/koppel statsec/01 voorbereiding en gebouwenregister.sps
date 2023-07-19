@@ -1,5 +1,13 @@
 * Encoding: windows-1252.
 
+***** OPMERKING *********
+* Doordat VEKA nu X-Y coördinaten bewaart in haar databank, is het niet langer nodig om dit allemaal te doen.
+* Dus scripts 01, 02 en 03 vervallen.
+
+
+
+
+
 PRESERVE.
  SET DECIMAL COMMA.
 
